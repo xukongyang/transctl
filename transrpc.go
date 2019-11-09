@@ -786,7 +786,7 @@ func TorrentSetLocation(location string, move bool, ids ...interface{}) *Torrent
 	return &TorrentSetLocationRequest{
 		ids:      ids,
 		location: location,
-		move:     bool,
+		move:     move,
 	}
 }
 
