@@ -880,57 +880,56 @@ func (t *Encryption) UnmarshalJSON(buf []byte) error {
 
 // Session holds transmission rpc session arguments.
 type Session struct {
-	changed map[string]bool `json:"-"` // fields marked as changed
-
-	AltSpeedDown              int64      `json:"alt-speed-down,omitempty"`               // max global download speed (KBps)
-	AltSpeedEnabled           bool       `json:"alt-speed-enabled,omitempty"`            // true means use the alt speeds
-	AltSpeedTimeBegin         int64      `json:"alt-speed-time-begin,omitempty"`         // when to turn on alt speeds (units: minutes after midnight)
-	AltSpeedTimeEnabled       bool       `json:"alt-speed-time-enabled,omitempty"`       // true means the scheduled on/off times are used
-	AltSpeedTimeEnd           int64      `json:"alt-speed-time-end,omitempty"`           // when to turn off alt speeds (units: same)
-	AltSpeedTimeDay           int64      `json:"alt-speed-time-day,omitempty"`           // what day(s) to turn on alt speeds (look at tr_sched_day)
-	AltSpeedUp                int64      `json:"alt-speed-up,omitempty"`                 // max global upload speed (KBps)
-	BlocklistURL              string     `json:"blocklist-url,omitempty"`                // location of the blocklist to use for "blocklist-update"
-	BlocklistEnabled          bool       `json:"blocklist-enabled,omitempty"`            // true means enabled
-	BlocklistSize             int64      `json:"blocklist-size,omitempty"`               // number of rules in the blocklist
-	CacheSizeMb               int64      `json:"cache-size-mb,omitempty"`                // maximum size of the disk cache (MB)
-	ConfigDir                 string     `json:"config-dir,omitempty"`                   // location of transmission's configuration directory
-	DownloadDir               string     `json:"download-dir,omitempty"`                 // default path to download torrents
-	DownloadQueueSize         int64      `json:"download-queue-size,omitempty"`          // max number of torrents to download at once (see download-queue-enabled)
-	DownloadQueueEnabled      bool       `json:"download-queue-enabled,omitempty"`       // if true, limit how many torrents can be downloaded at once
-	DownloadDirFreeSpace      int64      `json:"download-dir-free-space,omitempty"`      // ---- not documented ----
-	DhtEnabled                bool       `json:"dht-enabled,omitempty"`                  // true means allow dht in public torrents
-	Encryption                Encryption `json:"encryption,omitempty"`                   // "required", "preferred", "tolerated"
-	IdleSeedingLimit          int64      `json:"idle-seeding-limit,omitempty"`           // torrents we're seeding will be stopped if they're idle for this long
-	IdleSeedingLimitEnabled   bool       `json:"idle-seeding-limit-enabled,omitempty"`   // true if the seeding inactivity limit is honored by default
-	IncompleteDir             string     `json:"incomplete-dir,omitempty"`               // path for incomplete torrents, when enabled
-	IncompleteDirEnabled      bool       `json:"incomplete-dir-enabled,omitempty"`       // true means keep torrents in incomplete-dir until done
-	LpdEnabled                bool       `json:"lpd-enabled,omitempty"`                  // true means allow Local Peer Discovery in public torrents
-	PeerLimitGlobal           int64      `json:"peer-limit-global,omitempty"`            // maximum global number of peers
-	PeerLimitPerTorrent       int64      `json:"peer-limit-per-torrent,omitempty"`       // maximum global number of peers
-	PexEnabled                bool       `json:"pex-enabled,omitempty"`                  // true means allow pex in public torrents
-	PeerPort                  int64      `json:"peer-port,omitempty"`                    // port number
-	PeerPortRandomOnStart     bool       `json:"peer-port-random-on-start,omitempty"`    // true means pick a random peer port on launch
-	PortForwardingEnabled     bool       `json:"port-forwarding-enabled,omitempty"`      // true means enabled
-	QueueStalledEnabled       bool       `json:"queue-stalled-enabled,omitempty"`        // whether or not to consider idle torrents as stalled
-	QueueStalledMinutes       int64      `json:"queue-stalled-minutes,omitempty"`        // torrents that are idle for N minutes aren't counted toward seed-queue-size or download-queue-size
-	RenamePartialFiles        bool       `json:"rename-partial-files,omitempty"`         // true means append ".part" to incomplete files
-	RpcVersion                int64      `json:"rpc-version,omitempty"`                  // the current RPC API version
-	RpcVersionMinimum         int64      `json:"rpc-version-minimum,omitempty"`          // the minimum RPC API version supported
-	ScriptTorrentDoneFilename string     `json:"script-torrent-done-filename,omitempty"` // filename of the script to run
-	ScriptTorrentDoneEnabled  bool       `json:"script-torrent-done-enabled,omitempty"`  // whether or not to call the "done" script
-	SeedRatioLimit            float64    `json:"seedRatioLimit,omitempty"`               // the default seed ratio for torrents to use
-	SeedRatioLimited          bool       `json:"seedRatioLimited,omitempty"`             // true if seedRatioLimit is honored by default
-	SeedQueueSize             int64      `json:"seed-queue-size,omitempty"`              // max number of torrents to uploaded at once (see seed-queue-enabled)
-	SeedQueueEnabled          bool       `json:"seed-queue-enabled,omitempty"`           // if true, limit how many torrents can be uploaded at once
-	SpeedLimitDown            int64      `json:"speed-limit-down,omitempty"`             // max global download speed (KBps)
-	SpeedLimitDownEnabled     bool       `json:"speed-limit-down-enabled,omitempty"`     // true means enabled
-	SpeedLimitUp              int64      `json:"speed-limit-up,omitempty"`               // max global upload speed (KBps)
-	SpeedLimitUpEnabled       bool       `json:"speed-limit-up-enabled,omitempty"`       // true means enabled
-	StartAddedTorrents        bool       `json:"start-added-torrents,omitempty"`         // true means added torrents will be started right away
-	TrashOriginalTorrentFiles bool       `json:"trash-original-torrent-files,omitempty"` // true means the .torrent file of added torrents will be deleted
-	Units                     Units      `json:"units,omitempty"`                        // see units below
-	UtpEnabled                bool       `json:"utp-enabled,omitempty"`                  // true means allow utp
-	Version                   string     `json:"version,omitempty"`                      // long version string "$version ($revision)"
+	changed                   map[string]bool `json:"-"`                                      // fields marked as changed
+	AltSpeedDown              int64           `json:"alt-speed-down,omitempty"`               // max global download speed (KBps)
+	AltSpeedEnabled           bool            `json:"alt-speed-enabled,omitempty"`            // true means use the alt speeds
+	AltSpeedTimeBegin         int64           `json:"alt-speed-time-begin,omitempty"`         // when to turn on alt speeds (units: minutes after midnight)
+	AltSpeedTimeEnabled       bool            `json:"alt-speed-time-enabled,omitempty"`       // true means the scheduled on/off times are used
+	AltSpeedTimeEnd           int64           `json:"alt-speed-time-end,omitempty"`           // when to turn off alt speeds (units: same)
+	AltSpeedTimeDay           int64           `json:"alt-speed-time-day,omitempty"`           // what day(s) to turn on alt speeds (look at tr_sched_day)
+	AltSpeedUp                int64           `json:"alt-speed-up,omitempty"`                 // max global upload speed (KBps)
+	BlocklistURL              string          `json:"blocklist-url,omitempty"`                // location of the blocklist to use for "blocklist-update"
+	BlocklistEnabled          bool            `json:"blocklist-enabled,omitempty"`            // true means enabled
+	BlocklistSize             int64           `json:"blocklist-size,omitempty"`               // number of rules in the blocklist
+	CacheSizeMb               int64           `json:"cache-size-mb,omitempty"`                // maximum size of the disk cache (MB)
+	ConfigDir                 string          `json:"config-dir,omitempty"`                   // location of transmission's configuration directory
+	DownloadDir               string          `json:"download-dir,omitempty"`                 // default path to download torrents
+	DownloadQueueSize         int64           `json:"download-queue-size,omitempty"`          // max number of torrents to download at once (see download-queue-enabled)
+	DownloadQueueEnabled      bool            `json:"download-queue-enabled,omitempty"`       // if true, limit how many torrents can be downloaded at once
+	DownloadDirFreeSpace      int64           `json:"download-dir-free-space,omitempty"`      // ---- not documented ----
+	DhtEnabled                bool            `json:"dht-enabled,omitempty"`                  // true means allow dht in public torrents
+	Encryption                Encryption      `json:"encryption,omitempty"`                   // "required", "preferred", "tolerated"
+	IdleSeedingLimit          int64           `json:"idle-seeding-limit,omitempty"`           // torrents we're seeding will be stopped if they're idle for this long
+	IdleSeedingLimitEnabled   bool            `json:"idle-seeding-limit-enabled,omitempty"`   // true if the seeding inactivity limit is honored by default
+	IncompleteDir             string          `json:"incomplete-dir,omitempty"`               // path for incomplete torrents, when enabled
+	IncompleteDirEnabled      bool            `json:"incomplete-dir-enabled,omitempty"`       // true means keep torrents in incomplete-dir until done
+	LpdEnabled                bool            `json:"lpd-enabled,omitempty"`                  // true means allow Local Peer Discovery in public torrents
+	PeerLimitGlobal           int64           `json:"peer-limit-global,omitempty"`            // maximum global number of peers
+	PeerLimitPerTorrent       int64           `json:"peer-limit-per-torrent,omitempty"`       // maximum global number of peers
+	PexEnabled                bool            `json:"pex-enabled,omitempty"`                  // true means allow pex in public torrents
+	PeerPort                  int64           `json:"peer-port,omitempty"`                    // port number
+	PeerPortRandomOnStart     bool            `json:"peer-port-random-on-start,omitempty"`    // true means pick a random peer port on launch
+	PortForwardingEnabled     bool            `json:"port-forwarding-enabled,omitempty"`      // true means enabled
+	QueueStalledEnabled       bool            `json:"queue-stalled-enabled,omitempty"`        // whether or not to consider idle torrents as stalled
+	QueueStalledMinutes       int64           `json:"queue-stalled-minutes,omitempty"`        // torrents that are idle for N minutes aren't counted toward seed-queue-size or download-queue-size
+	RenamePartialFiles        bool            `json:"rename-partial-files,omitempty"`         // true means append ".part" to incomplete files
+	RPCVersion                int64           `json:"rpc-version,omitempty"`                  // the current RPC API version
+	RPCVersionMinimum         int64           `json:"rpc-version-minimum,omitempty"`          // the minimum RPC API version supported
+	ScriptTorrentDoneFilename string          `json:"script-torrent-done-filename,omitempty"` // filename of the script to run
+	ScriptTorrentDoneEnabled  bool            `json:"script-torrent-done-enabled,omitempty"`  // whether or not to call the "done" script
+	SeedRatioLimit            float64         `json:"seedRatioLimit,omitempty"`               // the default seed ratio for torrents to use
+	SeedRatioLimited          bool            `json:"seedRatioLimited,omitempty"`             // true if seedRatioLimit is honored by default
+	SeedQueueSize             int64           `json:"seed-queue-size,omitempty"`              // max number of torrents to uploaded at once (see seed-queue-enabled)
+	SeedQueueEnabled          bool            `json:"seed-queue-enabled,omitempty"`           // if true, limit how many torrents can be uploaded at once
+	SpeedLimitDown            int64           `json:"speed-limit-down,omitempty"`             // max global download speed (KBps)
+	SpeedLimitDownEnabled     bool            `json:"speed-limit-down-enabled,omitempty"`     // true means enabled
+	SpeedLimitUp              int64           `json:"speed-limit-up,omitempty"`               // max global upload speed (KBps)
+	SpeedLimitUpEnabled       bool            `json:"speed-limit-up-enabled,omitempty"`       // true means enabled
+	StartAddedTorrents        bool            `json:"start-added-torrents,omitempty"`         // true means added torrents will be started right away
+	TrashOriginalTorrentFiles bool            `json:"trash-original-torrent-files,omitempty"` // true means the .torrent file of added torrents will be deleted
+	Units                     Units           `json:"units,omitempty"`                        // see units below
+	UtpEnabled                bool            `json:"utp-enabled,omitempty"`                  // true means allow utp
+	Version                   string          `json:"version,omitempty"`                      // long version string "$version ($revision)"
 }
 
 // Units are session units.
@@ -1053,11 +1052,11 @@ func (req *SessionSetRequest) Do(ctx context.Context, cl *Client) error {
 	if req.changed["RenamePartialFiles"] {
 		params["rename-partial-files"] = req.RenamePartialFiles
 	}
-	if req.changed["RpcVersion"] {
-		params["rpc-version"] = req.RpcVersion
+	if req.changed["RPCVersion"] {
+		params["rpc-version"] = req.RPCVersion
 	}
-	if req.changed["RpcVersionMinimum"] {
-		params["rpc-version-minimum"] = req.RpcVersionMinimum
+	if req.changed["RPCVersionMinimum"] {
+		params["rpc-version-minimum"] = req.RPCVersionMinimum
 	}
 	if req.changed["ScriptTorrentDoneFilename"] {
 		params["script-torrent-done-filename"] = req.ScriptTorrentDoneFilename

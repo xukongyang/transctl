@@ -89,7 +89,7 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 		case int32:
 			v = append(v, int64(x))
 		case int64:
-			v = append(v, int64(x))
+			v = append(v, x)
 
 		case [20]byte:
 			v = append(v, fmt.Sprintf("%x", x))
