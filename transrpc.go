@@ -145,22 +145,22 @@ type Torrent struct {
 	Name                    string   `json:"name,omitempty"`                    // tr_info
 	PeerLimit               int64    `json:"peer-limit,omitempty"`              // tr_torrent
 	Peers                   []struct {
-		Address              string  `json:"address,omitempty"`              // tr_peer_stat
-		ClientName           string  `json:"clientName,omitempty"`           // tr_peer_stat
-		ClientIsChoked       bool    `json:"clientIsChoked,omitempty"`       // tr_peer_stat
-		ClientIsint64erested bool    `json:"clientIsint64erested,omitempty"` // tr_peer_stat
-		FlagStr              string  `json:"flagStr,omitempty"`              // tr_peer_stat
-		IsDownloadingFrom    bool    `json:"isDownloadingFrom,omitempty"`    // tr_peer_stat
-		IsEncrypted          bool    `json:"isEncrypted,omitempty"`          // tr_peer_stat
-		IsIncoming           bool    `json:"isIncoming,omitempty"`           // tr_peer_stat
-		IsUploadingTo        bool    `json:"isUploadingTo,omitempty"`        // tr_peer_stat
-		IsUTP                bool    `json:"isUTP,omitempty"`                // tr_peer_stat
-		PeerIsChoked         bool    `json:"peerIsChoked,omitempty"`         // tr_peer_stat
-		PeerIsint64erested   bool    `json:"peerIsint64erested,omitempty"`   // tr_peer_stat
-		Port                 int64   `json:"port,omitempty"`                 // tr_peer_stat
-		Progress             float64 `json:"progress,omitempty"`             // tr_peer_stat
-		RateToClient         int64   `json:"rateToClient,omitempty"`         // tr_peer_stat
-		RateToPeer           int64   `json:"rateToPeer,omitempty"`           // tr_peer_stat
+		Address            string  `json:"address,omitempty"`            // tr_peer_stat
+		ClientName         string  `json:"clientName,omitempty"`         // tr_peer_stat
+		ClientIsChoked     bool    `json:"clientIsChoked,omitempty"`     // tr_peer_stat
+		ClientIsInterested bool    `json:"clientIsInterested,omitempty"` // tr_peer_stat
+		FlagStr            string  `json:"flagStr,omitempty"`            // tr_peer_stat
+		IsDownloadingFrom  bool    `json:"isDownloadingFrom,omitempty"`  // tr_peer_stat
+		IsEncrypted        bool    `json:"isEncrypted,omitempty"`        // tr_peer_stat
+		IsIncoming         bool    `json:"isIncoming,omitempty"`         // tr_peer_stat
+		IsUploadingTo      bool    `json:"isUploadingTo,omitempty"`      // tr_peer_stat
+		IsUTP              bool    `json:"isUTP,omitempty"`              // tr_peer_stat
+		PeerIsChoked       bool    `json:"peerIsChoked,omitempty"`       // tr_peer_stat
+		PeerIsInterested   bool    `json:"peerIsInterested,omitempty"`   // tr_peer_stat
+		Port               int64   `json:"port,omitempty"`               // tr_peer_stat
+		Progress           float64 `json:"progress,omitempty"`           // tr_peer_stat
+		RateToClient       int64   `json:"rateToClient,omitempty"`       // tr_peer_stat
+		RateToPeer         int64   `json:"rateToPeer,omitempty"`         // tr_peer_stat
 	} `json:"peers,omitempty"` // n/a
 	PeersConnected int64 `json:"peersConnected,omitempty"` // tr_stat
 	PeersFrom      struct {
@@ -260,9 +260,11 @@ func (req *Request) Do(ctx context.Context, cl *Client) error {
 	if err != nil {
 		return err
 	}
-	return cl.Do(ctx, req.method, map[string]interface{}{
-		"ids": ids,
-	}, nil)
+	params := map[string]interface{}{}
+	if ids != nil {
+		params["ids"] = ids
+	}
+	return cl.Do(ctx, req.method, params, nil)
 }
 
 // TorrentStartRequest is a torrent start request.
@@ -421,7 +423,11 @@ func (req *TorrentSetRequest) Do(ctx context.Context, cl *Client) error {
 		if err != nil {
 			return err
 		}
-		params["ids"] = ids
+		if ids != nil {
+			params["ids"] = ids
+		} else {
+			delete(params, "ids")
+		}
 	}
 
 	return cl.Do(ctx, "torrent-set", params, nil)
@@ -575,15 +581,18 @@ func (req TorrentSetRequest) WithUploadLimited(uploadLimited bool) *TorrentSetRe
 
 // TorrentGetRequest is the torrent get request.
 type TorrentGetRequest struct {
-	ids    []interface{} // An optional "ids" array as described in 3.1
-	fields []string      // A required "fields" array of keys
+	ids []interface{} // An optional "ids" array as described in 3.1
 }
 
 // TorrentGet creates a torrent get request for the specified torrent ids.
 func TorrentGet(ids ...interface{}) *TorrentGetRequest {
-	return &TorrentGetRequest{
-		ids: ids,
-		fields: []string{
+	return &TorrentGetRequest{ids: ids}
+}
+
+// Do executes the torrent get request against the provided context and client.
+func (req *TorrentGetRequest) Do(ctx context.Context, cl *Client) (*TorrentGetResponse, error) {
+	params := map[string]interface{}{
+		"fields": []string{
 			"activityDate", "addedDate", "bandwidthPriority",
 			"comment", "corruptEver", "creator",
 			"dateCreated", "desiredAvailable", "doneDate",
@@ -609,19 +618,17 @@ func TorrentGet(ids ...interface{}) *TorrentGetRequest {
 			"wanted", "webseeds", "webseedsSendingToUs",
 		},
 	}
-}
 
-// Do executes the torrent get request against the provided context and client.
-func (req *TorrentGetRequest) Do(ctx context.Context, cl *Client) (*TorrentGetResponse, error) {
 	ids, err := checkIdentifierList(req.ids...)
 	if err != nil {
 		return nil, err
 	}
+	if ids != nil {
+		params["ids"] = ids
+	}
+
 	res := new(TorrentGetResponse)
-	if err := cl.Do(ctx, "torrent-get", map[string]interface{}{
-		"ids":    ids,
-		"fields": req.fields,
-	}, res); err != nil {
+	if err := cl.Do(ctx, "torrent-get", params, res); err != nil {
 		return nil, err
 	}
 	return res, nil

@@ -6,6 +6,53 @@ import (
 	"strings"
 )
 
+// Error is a transrpc error.
+type Error string
+
+// Error satisfies the error interface.
+func (err Error) Error() string {
+	return string(err)
+}
+
+// Error values.
+const (
+	// ErrInvalidTorrentHash is the invalid torrent hash error.
+	ErrInvalidTorrentHash Error = "invalid torrent hash"
+
+	// ErrInvalidIdentifierType is the invalid identifier type error.
+	ErrInvalidIdentifierType Error = "invalid identifier type"
+
+	// ErrRequestFailed is the request failed error.
+	ErrRequestFailed Error = "request failed"
+
+	// ErrRecentlyActiveCanHaveOnlyOneValue is the recently-active can have only one value error.
+	ErrRecentlyActiveCanHaveOnlyOneValue Error = "recently-active can have only one value"
+
+	// ErrInvalidPriority is the invalid priority error.
+	ErrInvalidPriority Error = "invalid priority"
+
+	// ErrInvalidTime is the invalid time error.
+	ErrInvalidTime Error = "invalid time"
+
+	// ErrInvalidBool is the invalid bool error.
+	ErrInvalidBool Error = "invalid bool"
+
+	// ErrInvalidEncryption is the invalid encryption error.
+	ErrInvalidEncryption Error = "invalid encryption"
+
+	// ErrTorrentRenamePathCanOnlyBeUsedWithOneTorrentIdentifier is the torrent
+	// rename path can only be used with one torrent identifier error.
+	ErrTorrentRenamePathCanOnlyBeUsedWithOneTorrentIdentifier Error = "torrent rename path can only be used with one torrent identifier"
+)
+
+const (
+	// recentlyActive is the recently active identifier.
+	recentlyActive = "recently-active"
+
+	// csrfHeader is the CSRF header used for transmission rpc sessions.
+	csrfHeader = "X-Transmission-Session-Id"
+)
+
 // sha1RE is a regexp to verify a SHA1 hash in string form.
 var sha1RE = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 
@@ -26,6 +73,10 @@ var sha1RE = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 // A id list with only one value will be flattened. If the identifier is
 // "recently-active", then it can be the only identifier in the list.
 func checkIdentifierList(ids ...interface{}) (interface{}, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
 	var v []interface{}
 	for _, id := range ids {
 		switch x := id.(type) {
@@ -79,50 +130,3 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 
 	return v, nil
 }
-
-// Error is a transrpc error.
-type Error string
-
-// Error satisfies the error interface.
-func (err Error) Error() string {
-	return string(err)
-}
-
-// Error values.
-const (
-	// ErrInvalidTorrentHash is the invalid torrent hash error.
-	ErrInvalidTorrentHash Error = "invalid torrent hash"
-
-	// ErrInvalidIdentifierType is the invalid identifier type error.
-	ErrInvalidIdentifierType Error = "invalid identifier type"
-
-	// ErrRequestFailed is the request failed error.
-	ErrRequestFailed Error = "request failed"
-
-	// ErrRecentlyActiveCanHaveOnlyOneValue is the recently-active can have only one value error.
-	ErrRecentlyActiveCanHaveOnlyOneValue Error = "recently-active can have only one value"
-
-	// ErrInvalidPriority is the invalid priority error.
-	ErrInvalidPriority Error = "invalid priority"
-
-	// ErrInvalidTime is the invalid time error.
-	ErrInvalidTime Error = "invalid time"
-
-	// ErrInvalidBool is the invalid bool error.
-	ErrInvalidBool Error = "invalid bool"
-
-	// ErrInvalidEncryption is the invalid encryption error.
-	ErrInvalidEncryption Error = "invalid encryption"
-
-	// ErrTorrentRenamePathCanOnlyBeUsedWithOneTorrentIdentifier is the torrent
-	// rename path can only be used with one torrent identifier error.
-	ErrTorrentRenamePathCanOnlyBeUsedWithOneTorrentIdentifier Error = "torrent rename path can only be used with one torrent identifier"
-)
-
-const (
-	// recentlyActive is the recently active identifier.
-	recentlyActive = "recently-active"
-
-	// csrfHeader is the CSRF header used for transmission rpc sessions.
-	csrfHeader = "X-Transmission-Session-Id"
-)
