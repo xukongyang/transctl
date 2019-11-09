@@ -247,7 +247,8 @@ type Request struct {
 // NewRequest creates a generic request for a list of torrent
 // identifiers and the named method.
 //
-// Passed IDs can be any of type of int{,8,16,32,64}, []byte, or string.
+// Passed IDs can be any of type of int{,8,16,32,64}, [20]byte, []byte, or
+// string.
 //
 // Used for torrent-{start,start-now,stop,verify,reannounce} methods.
 func NewRequest(method string, ids ...interface{}) *Request {
