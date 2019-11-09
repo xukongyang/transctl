@@ -166,8 +166,8 @@ func (cl *Client) TorrentRemove(ctx context.Context, deleteLocalData bool, ids .
 }
 
 // TorrentSetLocation issues a torrent set location request for the specified ids.
-func (cl *Client) TorrentSetLocation(ctx context.Context, location string, ids ...interface{}) error {
-	return TorrentSetLocation(location, ids...).Do(ctx, cl)
+func (cl *Client) TorrentSetLocation(ctx context.Context, location string, move bool, ids ...interface{}) error {
+	return TorrentSetLocation(location, move, ids...).Do(ctx, cl)
 }
 
 // TorrentRenamePath issues a torrent start request for the specified ids.

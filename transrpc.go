@@ -782,10 +782,11 @@ type TorrentSetLocationRequest struct {
 }
 
 // TorrentSetLocation creates a torrent set location request.
-func TorrentSetLocation(location string, ids ...interface{}) *TorrentSetLocationRequest {
+func TorrentSetLocation(location string, move bool, ids ...interface{}) *TorrentSetLocationRequest {
 	return &TorrentSetLocationRequest{
 		ids:      ids,
 		location: location,
+		move:     bool,
 	}
 }
 
@@ -801,13 +802,6 @@ func (req *TorrentSetLocationRequest) Do(ctx context.Context, cl *Client) error 
 		"location": req.location,
 		"move":     req.move,
 	}, nil)
-}
-
-// WithMove sets if true, move from previous location. otherwise, search
-// "location" for files (default: false).
-func (req TorrentSetLocationRequest) WithMove(move bool) *TorrentSetLocationRequest {
-	req.move = move
-	return &req
 }
 
 // TorrentRenamePathRequest is the torrent rename path request.
