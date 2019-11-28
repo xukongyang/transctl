@@ -5,13 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httputil"
 	"sync"
 	"sync/atomic"
+	"time"
+)
+
+const (
+	// DefaultTimeout is the default client timeout.
+	DefaultTimeout = 10 * time.Second
 )
 
 // Client is a transmission rpc client.
 type Client struct {
-	http.Client
+	cl        *http.Client
+	transport http.RoundTripper
 
 	// url is the remote url host.
 	url string
@@ -32,11 +40,16 @@ type Client struct {
 // NewClient issues a new transmission rpc client.
 func NewClient(opts ...ClientOption) *Client {
 	cl := &Client{
-		url:     "http://transmission:transmission@localhost:9091/transmission/rpc/",
+		cl: &http.Client{
+			Timeout: DefaultTimeout,
+		},
 		retries: 3,
 	}
 	for _, o := range opts {
 		o(cl)
+	}
+	if cl.url == "" {
+		WithHost("transmission:transmission@localhost:9091")(cl)
 	}
 	return cl
 }
@@ -56,7 +69,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 
 	// execute, retrying as per rpc spec
 	var res *http.Response
-	for i := 0; res == nil || res.StatusCode == 409 || i > cl.retries; i++ {
+	for i := 0; (res == nil || res.StatusCode == 409) && i < cl.retries; i++ {
 		// create http request
 		req, err := http.NewRequest("POST", cl.url, bytes.NewReader(body.Bytes()))
 		if err != nil {
@@ -70,7 +83,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 		cl.RUnlock()
 
 		// execute
-		res, err = cl.Client.Do(req.WithContext(ctx))
+		res, err = cl.cl.Do(req.WithContext(ctx))
 		if err != nil {
 			return err
 		}
@@ -86,14 +99,6 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 	if res == nil || res.StatusCode != 200 {
 		return ErrRequestFailed
 	}
-
-	/*
-		buf, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		log.Printf(">>> RESPONSE: %s", string(buf))
-	*/
 
 	// setup result
 	result := struct {
@@ -266,4 +271,61 @@ func WithRetries(retries int) ClientOption {
 	return func(cl *Client) {
 		cl.retries = retries
 	}
+}
+
+// WithHTTPClient is a transmission rpc client option to set the http.Client
+// used by the Client.
+func WithHTTPClient(httpClient *http.Client) ClientOption {
+	return func(cl *Client) {
+		cl.cl = httpClient
+	}
+}
+
+// WithLogf is a transmission rpc client option to set logging handlers HTTP
+// request and response bodies.
+func WithLogf(req, res func(string, ...interface{})) ClientOption {
+	return func(cl *Client) {
+		hl := &httpLogger{
+			req: req,
+			res: res,
+		}
+
+		// inject as client transport
+		cl.transport = hl
+		if cl.cl != nil {
+			hl.transport = cl.cl.Transport
+			cl.cl.Transport = hl
+		}
+	}
+}
+
+// httpLogger logs HTTP requests and responses.
+type httpLogger struct {
+	transport http.RoundTripper
+	req, res  func(string, ...interface{})
+}
+
+func (hl *httpLogger) RoundTrip(req *http.Request) (*http.Response, error) {
+	trans := hl.transport
+	if trans == nil {
+		trans = http.DefaultTransport
+	}
+
+	reqBody, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		return nil, err
+	}
+	res, err := trans.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	resBody, err := httputil.DumpResponse(res, true)
+	if err != nil {
+		return nil, err
+	}
+
+	hl.req("%s", string(reqBody))
+	hl.res("%s", string(resBody))
+
+	return res, err
 }
