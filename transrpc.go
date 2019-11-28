@@ -1,4 +1,4 @@
-// Package transrpc provides a client for the Transmission RPC.
+// Package transrpc provides a client for Transmission RPC hosts.
 //
 // See: https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
 package transrpc
