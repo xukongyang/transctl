@@ -1,16 +1,24 @@
 # transrpc [![GoDoc][godoc]][godoc-link] [![Build Status][travis-ci]][travis-ci-link]
 
 Package `transrpc` provides a Go idiomatic [Transmission RPC][transmission-spec]
-client.
-
-[transmission-spec]: https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
+client, primarily for use by the [command-line tool `transctl`][transctl].
 
 [godoc]: https://godoc.org/github.com/kenshaw/transrpc?status.svg (GoDoc)
 [godoc-link]: https://godoc.org/github.com/kenshaw/transrpc
 [travis-ci]: https://travis-ci.org/kenshaw/transrpc.svg?branch=master (Travis CI)
 [travis-ci-link]: https://travis-ci.org/kenshaw/transrpc
 
-## Example
+## Installing
+
+Install in the usual [Go][go-project] fashion:
+
+```sh
+$ go get -u github.com/kenshaw/transrpc
+```
+
+## Using
+
+`transrpc` can be used similar to the following:
 
 ```go
 // _example/example.go
@@ -38,3 +46,7 @@ func main() {
 	}
 }
 ```
+
+[go-project]: https://golang.org/project
+[transmission-spec]: https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
+[transctl]: https://github.com/kenshaw/transctl
