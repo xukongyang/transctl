@@ -115,10 +115,11 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 		}
 		cl.Unlock()
 
+		// status code check
 		switch res.StatusCode {
+		case http.StatusConflict, http.StatusOK:
 		case http.StatusUnauthorized:
-		case http.StatusConflict:
-		case http.StatusOK:
+			return ErrUnauthorizedUser
 		default:
 			return ErrUnknownProblemEncountered
 		}
