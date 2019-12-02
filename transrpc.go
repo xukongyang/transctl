@@ -247,7 +247,7 @@ type Request struct {
 // NewRequest creates a generic request for a list of torrent
 // identifiers and the named method.
 //
-// Passed IDs can be any of type of int{,8,16,32,64}, [20]byte, []byte, or
+// Passed IDs can be any of type of int{,8,16,32,64}, [40]byte, []byte, or
 // string.
 //
 // Used for torrent-{start,start-now,stop,verify,reannounce} methods.

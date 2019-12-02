@@ -64,7 +64,7 @@ var sha1RE = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 
 // checkIdentifierList processes the passed ids and verifies they are of the
 // right type. Allowed identifier types are: int{,8,16,32,64}, string,
-// [20]byte, and []byte.
+// [40]byte, and []byte.
 //
 // Collapses the passed list of IDs into the accepted "3.1" type defined in the
 // transmission rpc spec.
@@ -72,8 +72,8 @@ var sha1RE = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 // As per the spec identifiers will be changed to:
 //
 // 		torrent IDs => int64
-// 		bytes (hashes) => 20 character hexadecimal string
-//      strings (hashes) => 20 character hexadecimal string
+// 		bytes (hashes) => 40 character hexadecimal string
+//      strings (hashes) => 40 character hexadecimal string
 // 		"recently-active" string => passed through
 //
 // A id list with only one value will be flattened. If the identifier is
@@ -97,12 +97,12 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 		case int64:
 			v = append(v, x)
 
-		case [20]byte:
+		case [40]byte:
 			v = append(v, fmt.Sprintf("%x", x))
 
 		case []byte:
 			// convert
-			if len(x) != 20 {
+			if len(x) != 40 {
 				return nil, ErrInvalidTorrentHash
 			}
 			v = append(v, fmt.Sprintf("%x", x))
