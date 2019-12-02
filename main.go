@@ -36,10 +36,14 @@ func run() error {
 	switch cmd {
 	case "config":
 		f = doConfig
-	case "get":
-		f = doGet
+	case "context-set":
+		f = doContextSet
 	case "add":
 		f = doAdd
+	case "set":
+		f = doSet
+	case "get":
+		f = doGet
 	case "start":
 		f = doStart
 	case "stop":
@@ -54,6 +58,8 @@ func run() error {
 		f = doReannounce
 	case "session":
 		f = doSession
+	case "session set":
+		f = doSessionSet
 	}
 
 	return f(args)

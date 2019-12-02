@@ -35,38 +35,10 @@ func doConfig(args *Args) error {
 	return args.Config.Write(args.ConfigFile)
 }
 
-var intRE = regexp.MustCompile(`^[0-9]+$`)
-
-// doGet is the high-level entry point for 'get'.
-func doGet(args *Args) error {
-	cl, err := args.newClient()
-	if err != nil {
-		return err
-	}
-
-	if len(args.Args) == 0 && !args.All {
-		return ErrMustSpecifyAllOrAtLeastOneTorrent
-	}
-
-	var id int
-	var ids []interface{}
-	for _, v := range args.Args {
-		if intRE.MatchString(v) {
-			id, err = strconv.Atoi(v)
-			if err != nil {
-				return err
-			}
-			ids = append(ids, id)
-		} else {
-			ids = append(ids, v)
-		}
-	}
-	res, err := cl.TorrentGet(context.Background(), ids...)
-	if err != nil {
-		return err
-	}
-
-	return tblfmt.EncodeTable(os.Stdout, NewTorrentResult(res.Torrents))
+// doContextSet is the high-level entry point for 'context-set'.
+func doContextSet(args *Args) error {
+	args.Config.SetKey("default.context", args.Context)
+	return args.Config.Write(args.ConfigFile)
 }
 
 var magnetRE = regexp.MustCompile(`(?i)^magnet:\?`)
@@ -141,6 +113,45 @@ func doAdd(args *Args) error {
 	return nil
 }
 
+// doSet is the high-level entry point for 'set'.
+func doSet(args *Args) error {
+	return nil
+}
+
+var intRE = regexp.MustCompile(`^[0-9]+$`)
+
+// doGet is the high-level entry point for 'get'.
+func doGet(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+
+	if len(args.Args) == 0 && !args.All {
+		return ErrMustSpecifyAllOrAtLeastOneTorrent
+	}
+
+	var id int
+	var ids []interface{}
+	for _, v := range args.Args {
+		if intRE.MatchString(v) {
+			id, err = strconv.Atoi(v)
+			if err != nil {
+				return err
+			}
+			ids = append(ids, id)
+		} else {
+			ids = append(ids, v)
+		}
+	}
+	res, err := cl.TorrentGet(context.Background(), ids...)
+	if err != nil {
+		return err
+	}
+
+	return tblfmt.EncodeTable(os.Stdout, NewTorrentResult(res.Torrents))
+}
+
 // doStart is the high-level entry point for 'start'.
 func doStart(args *Args) error {
 	return nil
@@ -173,5 +184,10 @@ func doReannounce(args *Args) error {
 
 // doSession is the high-level entry point for 'session'.
 func doSession(args *Args) error {
+	return nil
+}
+
+// doSessionSet is the high-level entry point for 'session-set'.
+func doSessionSet(args *Args) error {
 	return nil
 }

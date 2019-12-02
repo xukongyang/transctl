@@ -75,12 +75,17 @@ func NewArgs() (*Args, error) {
 	kingpin.Version(Version)
 	kingpin.Flag("verbose", "toggle verbose").Short('v').Default("false").BoolVar(&args.Verbose)
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
+	kingpin.Flag("context", "config context").Short('c').PlaceHolder("<context>").StringVar(&args.Context)
 	kingpin.Flag("url", "transmission rpc url").Short('U').PlaceHolder("<url>").URLVar(&args.URL)
 
 	// config command
-	configCmd := kingpin.Command("config", "Get and set configuration options")
+	configCmd := kingpin.Command("config", "Get and set transctl configuration")
 	configCmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
 	configCmd.Arg("value", "value").StringVar(&args.ConfigParams.Value)
+
+	// context-set command
+	contextSetCmd := kingpin.Command("context-set", "Set default context")
+	contextSetCmd.Arg("context", "context name").Required().StringVar(&args.Context)
 
 	// get command
 	getCmd := kingpin.Command("get", "Get information about torrents")
@@ -88,13 +93,14 @@ func NewArgs() (*Args, error) {
 	getCmd.Flag("all", "all torrents").BoolVar(&args.All)
 	getCmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
 
+	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("NAME=VALUE").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
-	addCmd.Flag("paused", "add torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
+	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
 	addCmd.Flag("peer-limit", "peer limit").Short('l').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
-	addCmd.Flag("rm", "remove file after adding").BoolVar(&args.AddParams.Remove)
+	addCmd.Flag("rm", "remove torrents after adding").BoolVar(&args.AddParams.Remove)
 	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
 
 	return args, nil
