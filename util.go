@@ -21,11 +21,17 @@ func (err Error) Error() string {
 }
 
 const (
-	// ErrMustSpecifyAllOrAtLeastOneTorrent is the must specify all or at least one torrent error.
+	// ErrMustSpecifyAllOrAtLeastOneTorrent is the must specify all or at least
+	// one torrent error.
 	ErrMustSpecifyAllOrAtLeastOneTorrent Error = "must specify --all or at least one torrent"
 
-	// ErrConfigFileCannotBeADirectory is the config file cannot be a directory error.
+	// ErrConfigFileCannotBeADirectory is the config file cannot be a directory
+	// error.
 	ErrConfigFileCannotBeADirectory Error = "config file cannot be a directory"
+
+	// ErrMustSpecifyAtLeastOneTorrentOrURI is the must specify at least one
+	// torrent or uri error.
+	ErrMustSpecifyAtLeastOneTorrentOrURI Error = "must specify at least one torrent or URI"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that

@@ -37,14 +37,24 @@ type Args struct {
 		Value string
 	}
 
+	// AddParams are the add params.
+	AddParams struct {
+		Cookies           map[string]string
+		DownloadDir       string
+		Paused            bool
+		PeerLimit         int64
+		BandwidthPriority int64
+		Remove            bool
+	}
+
 	// Output is the output format type.
 	Output string
 
 	// All is the all toggle.
 	All bool
 
-	// IDs are torrent identifiers to use.
-	IDs []string
+	// Args are torrent identifiers to use.
+	Args []string
 }
 
 // NewArgs creates the command args.
@@ -59,6 +69,7 @@ func NewArgs() (*Args, error) {
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	args := &Args{}
+	args.AddParams.Cookies = make(map[string]string)
 
 	// global options
 	kingpin.Version(Version)
@@ -75,7 +86,16 @@ func NewArgs() (*Args, error) {
 	getCmd := kingpin.Command("get", "Get information about torrents")
 	getCmd.Flag("output", "output format").Short('o').StringVar(&args.Output)
 	getCmd.Flag("all", "all torrents").BoolVar(&args.All)
-	getCmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.IDs)
+	getCmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
+
+	addCmd := kingpin.Command("add", "Add torrents")
+	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("NAME=VALUE").StringMapVar(&args.AddParams.Cookies)
+	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
+	addCmd.Flag("paused", "add torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
+	addCmd.Flag("peer-limit", "peer limit").Short('l').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
+	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
+	addCmd.Flag("rm", "remove file after adding").BoolVar(&args.AddParams.Remove)
+	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
 
 	return args, nil
 }
