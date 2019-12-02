@@ -152,7 +152,10 @@ func doGet(args *Args) error {
 			ids = append(ids, v)
 		}
 	}
-	res, err := cl.TorrentGet(context.Background(), ids...)
+
+	// limit returned fields to only what will be displayed
+	req := transrpc.TorrentGet(ids...).WithFields("id", "name", "hashString")
+	res, err := req.Do(context.Background(), cl)
 	if err != nil {
 		return err
 	}

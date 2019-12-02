@@ -6,8 +6,8 @@ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d h1:UQZhZ2O0vMHr2c
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/kenshaw/transrpc v0.0.0-20191202060157-88e61cca3620 h1:tlD4MFbXtt6aK5apLXexJ4x6I0ZmWnB8oFKXEiCMBG4=
-github.com/kenshaw/transrpc v0.0.0-20191202060157-88e61cca3620/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
+github.com/kenshaw/transrpc v0.0.0-20191202100834-5648e5b0ba65 h1:exh+YFczJPZBCQM/ZTKuUBlz+aXqgtJk5RnmDa3ciZE=
+github.com/kenshaw/transrpc v0.0.0-20191202100834-5648e5b0ba65/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
 github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6 h1:KGybd4li3B9B6VNuOS0Y/0gocdFhgicDVjhc4hQRmAk=
 github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6/go.mod h1:EcJhteMzugzx8suTFN/D++EzL5/2OYjOdvb6yWV5+rw=
 github.com/mattn/go-runewidth v0.0.4 h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=
