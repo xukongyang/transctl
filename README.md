@@ -47,6 +47,10 @@ func main() {
 }
 ```
 
+Additionally, a more complex example used to remove a completed [torrent upon
+notification is available here][tcomplete].
+
 [go-project]: https://golang.org/project
 [transmission-spec]: https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
 [transctl]: https://github.com/kenshaw/transctl
+[tcomplete]: https://github.com/kenshaw/tcomplete/blob/master/main.go
