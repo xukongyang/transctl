@@ -14,19 +14,30 @@ import (
 const (
 	// DefaultTimeout is the default client timeout.
 	DefaultTimeout = 10 * time.Second
+
+	// DefaultUserAgent is the default client user agent.
+	DefaultUserAgent = "transrpc/0.1"
 )
 
 // Client is a transmission rpc client.
 type Client struct {
-	cl        *http.Client
+	// cl is the underlying http client.
+	cl *http.Client
+
+	// transport is the http transport used when not-nil. Used to specify
+	// things like retrying transport layers, additional authentication layers,
+	// or other transports such as a logging transport.
 	transport http.RoundTripper
 
-	// url is the remote url host.
-	url string
+	// userAgent is the user agent string sent to the rpc host.
+	userAgent string
 
 	// retries is the number of times to retry on a error, such as a 409
 	// (missing csrf id) error.
 	retries int
+
+	// url is the remote url host.
+	url string
 
 	// tag is an incrementing number used for each rpc request and response.
 	tag int64
@@ -43,7 +54,8 @@ func NewClient(opts ...ClientOption) *Client {
 		cl: &http.Client{
 			Timeout: DefaultTimeout,
 		},
-		retries: 3,
+		userAgent: DefaultUserAgent,
+		retries:   3,
 	}
 	for _, o := range opts {
 		o(cl)
@@ -57,22 +69,31 @@ func NewClient(opts ...ClientOption) *Client {
 // Do executes the transmission rpc method, json marshaling the passed
 // arguments and unmarshaling the response to v (if provided).
 func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{}) error {
-	// encode rpc body
-	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(map[string]interface{}{
-		"method":    method,
-		"arguments": arguments,
-		"tag":       atomic.AddInt64(&cl.tag, 1),
-	}); err != nil {
+	var err error
+
+	// encode args
+	var buf bytes.Buffer
+	if err = json.NewEncoder(&buf).Encode(arguments); err != nil {
 		return err
 	}
+	args := buf.Bytes()
 
 	// execute, retrying as per rpc spec
 	var res *http.Response
 	for i := 0; (res == nil || res.StatusCode == 409) && i < cl.retries; i++ {
+		// encode envelope + body
+		var body bytes.Buffer
+		if err = json.NewEncoder(&body).Encode(map[string]interface{}{
+			"method":    method,
+			"arguments": json.RawMessage(args),
+			"tag":       atomic.AddInt64(&cl.tag, 1),
+		}); err != nil {
+			return err
+		}
+
 		// create http request
-		req, err := http.NewRequest("POST", cl.url, bytes.NewReader(body.Bytes()))
-		if err != nil {
+		var req *http.Request
+		if req, err = http.NewRequest("POST", cl.url, bytes.NewReader(body.Bytes())); err != nil {
 			return err
 		}
 		req.Header.Set("Content-Type", "application/json")
@@ -100,7 +121,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 		return ErrRequestFailed
 	}
 
-	// setup result
+	// decode result
 	result := struct {
 		Result    string      `json:"result,omitempty"`
 		Arguments interface{} `json:"arguments,omitempty"`
@@ -108,12 +129,10 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 	}{
 		Arguments: v,
 	}
-
-	// decode
 	dec := json.NewDecoder(res.Body)
 	dec.DisallowUnknownFields()
 	dec.UseNumber()
-	if err := dec.Decode(&result); err != nil {
+	if err = dec.Decode(&result); err != nil {
 		return err
 	}
 
@@ -273,11 +292,19 @@ func WithRetries(retries int) ClientOption {
 	}
 }
 
-// WithHTTPClient is a transmission rpc client option to set the http.Client
-// used by the Client.
+// WithHTTPClient is a transmission rpc client option to set the underlying
+// http.Client used.
 func WithHTTPClient(httpClient *http.Client) ClientOption {
 	return func(cl *Client) {
 		cl.cl = httpClient
+	}
+}
+
+// WithUserAgent is a transmission rpc client option to set the user agent sent
+// to the rpc host.
+func WithUserAgent(userAgent string) ClientOption {
+	return func(cl *Client) {
+		cl.userAgent = userAgent
 	}
 }
 
