@@ -96,6 +96,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 		if req, err = http.NewRequest("POST", cl.url, bytes.NewReader(body.Bytes())); err != nil {
 			return err
 		}
+		req.Header.Set("User-Agent", cl.userAgent)
 		req.Header.Set("Content-Type", "application/json")
 		cl.RLock()
 		if cl.csrf != "" {
