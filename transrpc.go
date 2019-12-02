@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -582,7 +583,8 @@ func (req TorrentSetRequest) WithUploadLimited(uploadLimited bool) *TorrentSetRe
 
 // TorrentGetRequest is the torrent get request.
 type TorrentGetRequest struct {
-	ids []interface{} // An optional "ids" array as described in 3.1
+	ids    []interface{} // An optional "ids" array as described in 3.1
+	fields []string
 }
 
 // TorrentGet creates a torrent get request for the specified torrent ids.
@@ -590,36 +592,21 @@ func TorrentGet(ids ...interface{}) *TorrentGetRequest {
 	return &TorrentGetRequest{ids: ids}
 }
 
+// WithFields indicates the fields for the host to return.
+func (req TorrentGetRequest) WithFields(fields ...string) *TorrentGetRequest {
+	req.fields = append(req.fields, fields...)
+	return &req
+}
+
 // Do executes the torrent get request against the provided context and client.
 func (req *TorrentGetRequest) Do(ctx context.Context, cl *Client) (*TorrentGetResponse, error) {
-	params := map[string]interface{}{
-		"fields": []string{
-			"activityDate", "addedDate", "bandwidthPriority",
-			"comment", "corruptEver", "creator",
-			"dateCreated", "desiredAvailable", "doneDate",
-			"downloadDir", "downloadedEver", "downloadLimit",
-			"downloadLimited", "error", "errorString",
-			"eta", "etaIdle", "files",
-			"fileStats", "hashString", "haveUnchecked",
-			"haveValid", "honorsSessionLimits", "id",
-			"isFinished", "isPrivate", "isStalled",
-			"labels", "leftUntilDone", "magnetLink",
-			"manualAnnounceTime", "maxConnectedPeers", "metadataPercentComplete",
-			"name", "peer-limit", "peers",
-			"peersConnected", "peersFrom", "peersGettingFromUs",
-			"peersSendingToUs", "percentDone", "pieces",
-			"pieceCount", "pieceSize", "priorities",
-			"queuePosition", "rateDownload", "rateUpload",
-			"recheckProgress", "secondsDownloading", "secondsSeeding",
-			"seedIdleLimit", "seedIdleMode", "seedRatioLimit",
-			"seedRatioMode", "sizeWhenDone", "startDate",
-			"status", "trackers", "trackerStats",
-			"totalSize", "torrentFile", "uploadedEver",
-			"uploadLimit", "uploadLimited", "uploadRatio",
-			"wanted", "webseeds", "webseedsSendingToUs",
-		},
+	fields := req.fields
+	if fields == nil {
+		fields = DefaultTorrentGetFields()
 	}
-
+	params := map[string]interface{}{
+		"fields": fields,
+	}
 	ids, err := checkIdentifierList(req.ids...)
 	if err != nil {
 		return nil, err
@@ -627,12 +614,40 @@ func (req *TorrentGetRequest) Do(ctx context.Context, cl *Client) (*TorrentGetRe
 	if ids != nil {
 		params["ids"] = ids
 	}
-
 	res := new(TorrentGetResponse)
 	if err := cl.Do(ctx, "torrent-get", params, res); err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+// DefaultTorrentGetFields returns the list of all torrent field names.
+func DefaultTorrentGetFields() []string {
+	return []string{
+		"activityDate", "addedDate", "bandwidthPriority",
+		"comment", "corruptEver", "creator",
+		"dateCreated", "desiredAvailable", "doneDate",
+		"downloadDir", "downloadedEver", "downloadLimit",
+		"downloadLimited", "error", "errorString",
+		"eta", "etaIdle", "files",
+		"fileStats", "hashString", "haveUnchecked",
+		"haveValid", "honorsSessionLimits", "id",
+		"isFinished", "isPrivate", "isStalled",
+		"labels", "leftUntilDone", "magnetLink",
+		"manualAnnounceTime", "maxConnectedPeers", "metadataPercentComplete",
+		"name", "peer-limit", "peers",
+		"peersConnected", "peersFrom", "peersGettingFromUs",
+		"peersSendingToUs", "percentDone", "pieces",
+		"pieceCount", "pieceSize", "priorities",
+		"queuePosition", "rateDownload", "rateUpload",
+		"recheckProgress", "secondsDownloading", "secondsSeeding",
+		"seedIdleLimit", "seedIdleMode", "seedRatioLimit",
+		"seedRatioMode", "sizeWhenDone", "startDate",
+		"status", "trackers", "trackerStats",
+		"totalSize", "torrentFile", "uploadedEver",
+		"uploadLimit", "uploadLimited", "uploadRatio",
+		"wanted", "webseeds", "webseedsSendingToUs",
+	}
 }
 
 // TorrentGetResponse is the torrent get response.
@@ -671,9 +686,32 @@ func (req *TorrentAddRequest) Do(ctx context.Context, cl *Client) (*TorrentAddRe
 	return res, nil
 }
 
-// WithCookies sets pointer to a string of one or more cookies..
+// WithCookies sets cookies to a string of one or more cookies
 func (req TorrentAddRequest) WithCookies(cookies string) *TorrentAddRequest {
 	req.Cookies = cookies
+	return &req
+}
+
+// WithCookiesList sets cookies to the set of key, value strings.
+func (req TorrentAddRequest) WithCookiesList(cookies ...string) *TorrentAddRequest {
+	if len(cookies)%2 != 0 {
+		panic("cookies length must be even")
+	}
+	s := make([]string, len(cookies)/2)
+	for i := 0; i < len(cookies); i += 2 {
+		s = append(s, fmt.Sprintf("%s=%s", cookies[i], cookies[i+1]))
+	}
+	req.Cookies = strings.Join(s, "; ")
+	return &req
+}
+
+// WithCookiesMap sets cookies from a map.
+func (req TorrentAddRequest) WithCookiesMap(cookies map[string]string) *TorrentAddRequest {
+	s := make([]string, len(cookies))
+	for k, v := range cookies {
+		s = append(s, fmt.Sprintf("%s=%s", k, v))
+	}
+	req.Cookies = strings.Join(s, "; ")
 	return &req
 }
 
