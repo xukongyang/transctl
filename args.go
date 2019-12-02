@@ -35,6 +35,7 @@ type Args struct {
 	ConfigParams struct {
 		Name  string
 		Value string
+		Unset bool
 	}
 
 	// AddParams are the add params.
@@ -82,6 +83,7 @@ func NewArgs() (*Args, error) {
 	configCmd := kingpin.Command("config", "Get and set transctl configuration")
 	configCmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
 	configCmd.Arg("value", "value").StringVar(&args.ConfigParams.Value)
+	configCmd.Flag("unset", "unset value").BoolVar(&args.ConfigParams.Unset)
 
 	// context-set command
 	contextSetCmd := kingpin.Command("context-set", "Set default context")

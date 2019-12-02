@@ -13,9 +13,7 @@ import (
 )
 
 /*
-config
 get
-add
 start
 stop
 move
@@ -27,11 +25,21 @@ session
 
 // doConfig is the high-level entry point for 'config'.
 func doConfig(args *Args) error {
-	if args.ConfigParams.Value == "" {
+	switch {
+	case args.ConfigParams.Unset && args.ConfigParams.Value != "":
+		return ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig
+
+	case args.ConfigParams.Unset:
+		args.Config.RemoveKey(args.ConfigParams.Name)
+
+	case args.ConfigParams.Value == "":
 		fmt.Fprintln(os.Stdout, args.Config.GetKey(args.ConfigParams.Name))
 		return nil
+
+	case args.ConfigParams.Value != "":
+		args.Config.SetKey(args.ConfigParams.Name, args.ConfigParams.Value)
 	}
-	args.Config.SetKey(args.ConfigParams.Name, args.ConfigParams.Value)
+
 	return args.Config.Write(args.ConfigFile)
 }
 

@@ -32,6 +32,10 @@ const (
 	// ErrMustSpecifyAtLeastOneTorrentOrURI is the must specify at least one
 	// torrent or uri error.
 	ErrMustSpecifyAtLeastOneTorrentOrURI Error = "must specify at least one torrent or URI"
+
+	// ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig is the cannot
+	// specify unsite while trying to set a value with config error.
+	ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig Error = "cannot specify --unset while trying to set a value with config"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
