@@ -33,7 +33,7 @@ type Client struct {
 	userAgent string
 
 	// retries is the number of times to retry on a error, such as a 409
-	// (missing csrf id) error.
+	// (http.StatusConflict / missing CSRF token) error.
 	retries int
 
 	// url is the remote url host.
@@ -80,7 +80,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 
 	// execute, retrying as per rpc spec
 	var res *http.Response
-	for i := 0; (res == nil || res.StatusCode == 409) && i < cl.retries; i++ {
+	for i := 0; (res == nil || res.StatusCode == http.StatusConflict) && i < cl.retries; i++ {
 		// encode envelope + body
 		var body bytes.Buffer
 		if err = json.NewEncoder(&body).Encode(map[string]interface{}{
@@ -114,10 +114,18 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 			cl.csrf = csrf
 		}
 		cl.Unlock()
+
+		switch res.StatusCode {
+		case http.StatusUnauthorized:
+		case http.StatusConflict:
+		case http.StatusOK:
+		default:
+			return ErrUnknownProblemEncountered
+		}
 	}
 
 	// check status
-	if res == nil || res.StatusCode != 200 {
+	if res == nil || res.StatusCode != http.StatusOK {
 		return ErrRequestFailed
 	}
 

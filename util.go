@@ -22,6 +22,12 @@ const (
 	// ErrInvalidIdentifierType is the invalid identifier type error.
 	ErrInvalidIdentifierType Error = "invalid identifier type"
 
+	// ErrUnauthorizedUser is the unauthorized user error.
+	ErrUnauthorizedUser Error = "unauthorized user"
+
+	// ErrUnknownProblemEncountered is the unknown problem encountered error.
+	ErrUnknownProblemEncountered Error = "unknown problem encountered"
+
 	// ErrRequestFailed is the request failed error.
 	ErrRequestFailed Error = "request failed"
 
