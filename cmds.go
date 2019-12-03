@@ -6,10 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
-	"strconv"
 
 	"github.com/kenshaw/transrpc"
-	"github.com/xo/tblfmt"
 )
 
 /*
@@ -128,71 +126,46 @@ func doSet(args *Args) error {
 	return nil
 }
 
-var intRE = regexp.MustCompile(`^[0-9]+$`)
-
 // doGet is the high-level entry point for 'get'.
 func doGet(args *Args) error {
-	cl, err := args.newClient()
+	_, torrents, err := args.findTorrents()
 	if err != nil {
 		return err
 	}
+	return NewTorrentResult(torrents).Encode(os.Stdout, args)
+}
 
-	if len(args.Args) == 0 && !args.All {
-		return ErrMustSpecifyAllOrAtLeastOneTorrent
-	}
-
-	var id int
-	var ids []interface{}
-	for _, v := range args.Args {
-		if intRE.MatchString(v) {
-			id, err = strconv.Atoi(v)
-			if err != nil {
-				return err
-			}
-			ids = append(ids, id)
-		} else {
-			ids = append(ids, v)
+// do is the high-level entry point for 'start'.
+func doReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
+	return func(args *Args) error {
+		cl, torrents, err := args.findTorrents()
+		if err != nil {
+			return err
 		}
+		return f(convTorrentIDs(torrents)...).Do(context.Background(), cl)
 	}
-
-	// limit returned fields to only what will be displayed
-	req := transrpc.TorrentGet(ids...).WithFields("id", "name", "hashString")
-	res, err := req.Do(context.Background(), cl)
-	if err != nil {
-		return err
-	}
-
-	return tblfmt.EncodeTable(os.Stdout, NewTorrentResult(res.Torrents))
-}
-
-// doStart is the high-level entry point for 'start'.
-func doStart(args *Args) error {
-	return nil
-}
-
-// doStop is the high-level entry point for 'stop'.
-func doStop(args *Args) error {
-	return nil
 }
 
 // doMove is the high-level entry point for 'move'.
 func doMove(args *Args) error {
-	return nil
+	cl, torrents, err := args.findTorrents()
+	if err != nil {
+		return err
+	}
+	return transrpc.TorrentSetLocation(
+		args.MoveParams.Dest, true, convTorrentIDs(torrents)...,
+	).Do(context.Background(), cl)
 }
 
 // doRemove is the high-level entry point for 'remove'.
 func doRemove(args *Args) error {
-	return nil
-}
-
-// doVerify is the high-level entry point for 'verify'.
-func doVerify(args *Args) error {
-	return nil
-}
-
-// doReannounce is the high-level entry point for 'reannounce'.
-func doReannounce(args *Args) error {
-	return nil
+	cl, torrents, err := args.findTorrents()
+	if err != nil {
+		return err
+	}
+	return transrpc.TorrentRemove(
+		args.RemoveParams.Remove, convTorrentIDs(torrents)...,
+	).Do(context.Background(), cl)
 }
 
 // doSession is the high-level entry point for 'session'.

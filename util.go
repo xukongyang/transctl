@@ -1,13 +1,17 @@
 package main
 
 import (
+	"io"
+
 	"github.com/kenshaw/transrpc"
+	"github.com/xo/tblfmt"
 )
 
 const (
-	defaultHost         = `localhost:9091`
-	defaultShortHashLen = 7
-	defaultConfig       = `[default]
+	defaultHost           = `localhost:9091`
+	defaultShortHashLen   = 7
+	minimumHashCompareLen = 5
+	defaultConfig         = `[default]
 	output=table
 `
 )
@@ -21,9 +25,9 @@ func (err Error) Error() string {
 }
 
 const (
-	// ErrMustSpecifyAllOrAtLeastOneTorrent is the must specify all or at least
-	// one torrent error.
-	ErrMustSpecifyAllOrAtLeastOneTorrent Error = "must specify --all or at least one torrent"
+	// ErrMustSpecifyAllRecentOrAtLeastOneTorrent is the must specify all,
+	// recent or at least one torrent error.
+	ErrMustSpecifyAllRecentOrAtLeastOneTorrent Error = "must specify --all, --recent or at least one torrent"
 
 	// ErrConfigFileCannotBeADirectory is the config file cannot be a directory
 	// error.
@@ -44,6 +48,9 @@ const (
 	// ErrMustSpecifyURLHostOrConfigureTheContextAndContextURL is the must
 	// specify url, host, or configure the context and context.url error.
 	ErrMustSpecifyURLHostOrConfigureTheContextAndContextURL Error = "must specify --url, --host, or configure the context and context.url"
+
+	// ErrInvalidMatchOrder is the invalid match order error.
+	ErrInvalidMatchOrder Error = "invalid match order"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
@@ -95,4 +102,19 @@ func (*TorrentResult) Err() error {
 // NextResultSet satisfies the tblfmt.ResultSet interface.
 func (*TorrentResult) NextResultSet() bool {
 	return false
+}
+
+// Encode encodes the torrent result using the settings in args to the
+// io.Writer.
+func (tr *TorrentResult) Encode(w io.Writer, args *Args) error {
+	return tblfmt.EncodeTable(w, tr)
+}
+
+// convTorrentIDs converts torrent list to a hash string identifier list.
+func convTorrentIDs(torrents []transrpc.Torrent) []interface{} {
+	ids := make([]interface{}, len(torrents))
+	for i := 0; i < len(torrents); i++ {
+		ids[i] = torrents[i].HashString
+	}
+	return ids
 }

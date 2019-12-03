@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/jdxcode/netrc"
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/ini"
+	glob "github.com/ryanuber/go-glob"
 )
 
 // Args holds command args.
@@ -39,7 +43,7 @@ type Args struct {
 	// Credentials is the global user:pass credentials to work with.
 	Credentials string
 
-	// CredentialsWasSet is true when credentials were set on command line.
+	// CredentialsWasSet is the credentials was set toggle.
 	CredentialsWasSet bool
 
 	// NetRC toggles enabling .netrc loading.
@@ -71,11 +75,38 @@ type Args struct {
 		Remove            bool
 	}
 
+	// StartParams are the start params.
+	StartParams struct {
+		Now bool
+	}
+
+	// MoveParams are the move params.
+	MoveParams struct {
+		Dest string
+	}
+
+	// RemoveParams are the remove params.
+	RemoveParams struct {
+		Remove bool
+	}
+
 	// Output is the output format type.
 	Output string
 
 	// All is the all toggle.
 	All bool
+
+	// Recent is the recent toggle.
+	Recent bool
+
+	// MatchOrder is torrent identifier match order.
+	MatchOrder []string
+
+	// MatchOrderWasSet is the match order was set toggle.
+	MatchOrderWasSet bool
+
+	// MatchOpts are torrent identifier match order options.
+	// MatchOpts map[string]string
 
 	// Args are torrent identifiers to use.
 	Args []string
@@ -103,20 +134,22 @@ func NewArgs() (*Args, error) {
 	// kingpin settings
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate)
 
+	// create args
 	args := &Args{}
+	// args.MatchOpts = make(map[string]string)
 	args.AddParams.Cookies = make(map[string]string)
 
 	// global options
-	kingpin.Flag("verbose", "toggle verbose").Short('v').Default("false").BoolVar(&args.Verbose)
+	kingpin.Flag("verbose", "toggle verbose (default: false)").Short('v').Default("false").BoolVar(&args.Verbose)
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
 	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
 	kingpin.Flag("url", "transmission rpc url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
-	kingpin.Flag("netrc", "enable netrc loading (enabled by default)").Short('n').Default("true").BoolVar(&args.Netrc)
+	kingpin.Flag("netrc", "enable netrc loading (default: true)").Short('n').Default("true").BoolVar(&args.Netrc)
 	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.NetrcFile)
-	kingpin.Flag("proto", "protocol to use").Default("http").PlaceHolder("<proto>").StringVar(&args.Proto)
+	kingpin.Flag("proto", "protocol to use (default: http)").Default("http").PlaceHolder("<proto>").StringVar(&args.Proto)
 	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.CredentialsWasSet).StringVar(&args.Credentials)
-	kingpin.Flag("host", "remote host").Short('h').Default("localhost:9091").PlaceHolder("<host>").StringVar(&args.Host)
-	kingpin.Flag("rpc-path", "rpc path").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
+	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host)
+	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set transctl configuration")
@@ -128,12 +161,6 @@ func NewArgs() (*Args, error) {
 	contextSetCmd := kingpin.Command("context-set", "Set default context")
 	contextSetCmd.Arg("context", "context name").Required().StringVar(&args.Context)
 
-	// get command
-	getCmd := kingpin.Command("get", "Get information about torrents")
-	getCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
-	getCmd.Flag("all", "all torrents").BoolVar(&args.All)
-	getCmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
-
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
@@ -143,6 +170,53 @@ func NewArgs() (*Args, error) {
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("rm", "remove torrents after adding").BoolVar(&args.AddParams.Remove)
 	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
+
+	// add retrieval/manipulation commands
+	commands := []string{
+		"get", "Get information about torrents",
+		"start", "Start torrents",
+		"stop", "Stop torrents",
+		"move", "Move torrent location",
+		"remove", "Remove torrents",
+		"verify", "Verify torrents",
+		"reannounce", "Reannounce torrents",
+		"queue bottom", "Move torrents to bottom of queue",
+		"queue top", "Move torrents to top of queue",
+		"queue up", "Move torrents up in queue",
+		"queue down", "Move torrents down in queue",
+	}
+
+	var queueCmd *kingpin.CmdClause
+	for i := 0; i < len(commands); i += 2 {
+		f := kingpin.Command
+
+		// handle queue command creation
+		if strings.HasPrefix(commands[i], "queue ") {
+			if queueCmd == nil {
+				queueCmd = kingpin.Command("queue", "Change torrent queue position")
+			}
+			f = queueCmd.Command
+		}
+
+		// add command
+		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
+		cmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
+		cmd.Flag("all", "all torrents").Short('a').BoolVar(&args.All)
+		cmd.Flag("recent", "recently active torrents").Short('t').BoolVar(&args.Recent)
+		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.MatchOrder, "hash", "id", "glob")
+		// cmd.Flag("match-opt", "match option").Short('M').PlaceHolder("<k>=<v>").Default("k=v").StringMapVar(&args.MatchOpts)
+
+		switch commands[i] {
+		case "start":
+			cmd.Flag("now", "start now").BoolVar(&args.StartParams.Now)
+		case "move":
+			cmd.Flag("dest", "move destination").Short('d').PlaceHolder("<dir>").StringVar(&args.MoveParams.Dest)
+		case "remove":
+			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
+		}
+
+		cmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
+	}
 
 	// add --version flag
 	kingpin.Flag("version", "display version and exit").PreAction(func(*kingpin.ParseContext) error {
@@ -280,6 +354,72 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 	}
 
 	return transrpc.NewClient(opts...), nil
+}
+
+var intRE = regexp.MustCompile(`^[0-9]+$`)
+
+// findTorrents finds torrents based on the identifier args.
+func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
+	cl, err := args.newClient()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var ids []interface{}
+	switch {
+	case args.Recent:
+		ids = append(ids, transrpc.RecentlyActive)
+	case args.All:
+	default:
+	}
+
+	// limit returned fields to match fields only
+	req := transrpc.TorrentGet(ids...).WithFields("id", "name", "hashString")
+	res, err := req.Do(context.Background(), cl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// grab context match order if specified
+	matchOrder := args.MatchOrder
+	if v := args.getContextKey("match-order"); v != "" && !args.MatchOrderWasSet {
+		matchOrder = strings.Split(v, ",")
+		for i := 0; i < len(matchOrder); i++ {
+			matchOrder[i] = strings.ToLower(strings.TrimSpace(matchOrder[i]))
+		}
+	}
+
+	// filter torrents
+	var torrents []transrpc.Torrent
+	if args.All || args.Recent {
+		torrents = res.Torrents
+	} else {
+		for _, t := range res.Torrents {
+			for _, id := range args.Args {
+				for _, m := range matchOrder {
+					switch m {
+					case "id":
+						if id == strconv.FormatInt(t.ID, 10) {
+							torrents = append(torrents, t)
+						}
+					case "hash":
+						if len(id) >= minimumHashCompareLen && strings.HasPrefix(t.HashString, id) {
+							torrents = append(torrents, t)
+						}
+					case "glob":
+						if glob.Glob(id, t.Name) {
+							torrents = append(torrents, t)
+						}
+					case "fuzzy":
+					default:
+						return nil, nil, ErrInvalidMatchOrder
+					}
+				}
+			}
+		}
+	}
+
+	return cl, torrents, nil
 }
 
 // logf creates a new log func with the specified prefix.

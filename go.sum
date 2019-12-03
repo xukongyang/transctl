@@ -12,8 +12,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d h1:Io4Ts9W/92wkP9VKQTbGpY5VczamXILBrpz490a1/vw=
 github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d/go.mod h1:PSWm5RA4GUQ+cyCXiBIIUjlDWdJci5cU3GVKwaQRmW8=
-github.com/kenshaw/transrpc v0.0.0-20191203033755-3ecadb0f330f h1:2DgIoAoIuRVajbeEp+vOvoesnaAUXw/QpdrXbS+x8iQ=
-github.com/kenshaw/transrpc v0.0.0-20191203033755-3ecadb0f330f/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
+github.com/kenshaw/transrpc v0.0.0-20191203085700-867fb6bd4645 h1:X7vWIItgTgf11xgjQWVRCY/9deZg4FXV6OkUAOBtPD8=
+github.com/kenshaw/transrpc v0.0.0-20191203085700-867fb6bd4645/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
 github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6 h1:KGybd4li3B9B6VNuOS0Y/0gocdFhgicDVjhc4hQRmAk=
 github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6/go.mod h1:EcJhteMzugzx8suTFN/D++EzL5/2OYjOdvb6yWV5+rw=
 github.com/mattn/go-runewidth v0.0.4 h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=
@@ -22,6 +22,8 @@ github.com/mattn/go-runewidth v0.0.6 h1:V2iyH+aX9C5fsYCpK60U8BYIvmhqxuOL3JZcqc1N
 github.com/mattn/go-runewidth v0.0.6/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/ryanuber/go-glob v1.0.0 h1:iQh3xXAumdQ+4Ufa5b25cRpC5TYKlno6hsv6Cb3pkBk=
+github.com/ryanuber/go-glob v1.0.0/go.mod h1:807d1WSdnB0XRJzKNil9Om6lcp/3a0v4qIHxIXzX/Yc=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
