@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
+	"strings"
 
 	"github.com/kenshaw/transrpc"
 )
@@ -13,25 +15,52 @@ import (
 // doConfig is the high-level entry point for 'config'.
 func doConfig(args *Args) error {
 	switch {
+	case args.ListAll && args.ConfigParams.Unset:
+		return ErrCannotListAllOptionsAndUnset
+	case args.ConfigParams.Remote && args.ConfigParams.Unset:
+		return ErrCannotUnsetARemoteConfigOption
+	case args.ConfigParams.Unset && args.ConfigParams.Name == "":
+		return ErrMustSpecifyConfigOptionNameToUnset
 	case args.ConfigParams.Unset && args.ConfigParams.Value != "":
 		return ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig
+	}
 
+	var store ConfigStore = args.Config
+	if args.ConfigParams.Remote {
+		var err error
+		store, err = NewRemoteConfigStore(args)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch {
 	case args.ConfigParams.Unset:
-		args.Config.RemoveKey(args.ConfigParams.Name)
+		store.RemoveKey(args.ConfigParams.Name)
+		return store.Write(args.ConfigFile)
 
-	case args.ConfigParams.Value == "":
-		fmt.Fprintln(os.Stdout, args.Config.GetKey(args.ConfigParams.Name))
+	case args.ConfigParams.Name != "" && args.ConfigParams.Value == "":
+		fmt.Fprintln(os.Stdout, store.GetKey(args.ConfigParams.Name))
 		return nil
 
 	case args.ConfigParams.Value != "":
-		args.Config.SetKey(args.ConfigParams.Name, args.ConfigParams.Value)
+		store.SetKey(args.ConfigParams.Name, args.ConfigParams.Value)
+		return store.Write(args.ConfigFile)
 	}
 
-	return args.Config.Write(args.ConfigFile)
-}
+	// list all
+	m := store.GetMapFlat()
+	keys := make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(os.Stdout, "%s=%s\n", strings.TrimSpace(k), strings.TrimSpace(m[k]))
+	}
 
-// doConfigRemote is the high-level entry point for 'config --remote'.
-func doConfigRemote(args *Args) error {
 	return nil
 }
 

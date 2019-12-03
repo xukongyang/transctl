@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"io"
+	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/kenshaw/transrpc"
 	"github.com/xo/tblfmt"
@@ -46,6 +51,18 @@ const (
 
 	// ErrInvalidMatchOrder is the invalid match order error.
 	ErrInvalidMatchOrder Error = "invalid match order"
+
+	// ErrCannotListAllOptionsAndUnset is the cannot list all options and unset
+	// error.
+	ErrCannotListAllOptionsAndUnset Error = "cannot --list all options and --unset"
+
+	// ErrCannotUnsetARemoteConfigOption is the cannot unset a remote config
+	// option error.
+	ErrCannotUnsetARemoteConfigOption Error = "cannot --unset a --remote config option"
+
+	// ErrMustSpecifyConfigOptionNameToUnset is the must specify config option
+	// name to unset error.
+	ErrMustSpecifyConfigOptionNameToUnset Error = "must specify config option name to --unset"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
@@ -112,4 +129,95 @@ func convTorrentIDs(torrents []transrpc.Torrent) []interface{} {
 		ids[i] = torrents[i].HashString
 	}
 	return ids
+}
+
+// ConfigStore is the interface for config stores.
+type ConfigStore interface {
+	GetKey(string) string
+	SetKey(string, string)
+	RemoveKey(string)
+	GetMapFlat() map[string]string
+	Write(string) error
+}
+
+// RemoteConfigStore wraps the transrpc client.
+type RemoteConfigStore struct {
+	cl      *transrpc.Client
+	session *transrpc.Session
+}
+
+// NewRemoteConfigStore creates a new remote config store.
+func NewRemoteConfigStore(args *Args) (*RemoteConfigStore, error) {
+	cl, err := args.newClient()
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := cl.SessionGet(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return &RemoteConfigStore{cl, session}, nil
+}
+
+// GetKey satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) GetKey(key string) string {
+	return r.GetMapFlat()[key]
+}
+
+// SetKey satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) SetKey(key, value string) {
+}
+
+// RemoveKey satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) RemoveKey(key string) {
+	panic("cannot remove remote session config option")
+}
+
+// GetMapFlat satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) GetMapFlat() map[string]string {
+	m := make(map[string]string)
+	addFieldsToMap(m, "", reflect.ValueOf(*r.session))
+	return m
+}
+
+// addFieldsToMap adds reflected field values to the map.
+func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
+	t := v.Type()
+	count := t.NumField()
+	for i := 0; i < count; i++ {
+		tag := t.Field(i).Tag.Get("json")
+		if tag == "" || tag == "-" {
+			continue
+		}
+		name := strings.SplitN(tag, ",", 2)[0]
+		f := v.Field(i)
+		switch f.Kind() {
+		case reflect.String:
+			m[prefix+name] = f.String()
+		case reflect.Int64:
+			m[prefix+name] = strconv.FormatInt(f.Int(), 10)
+		case reflect.Bool:
+			m[prefix+name] = strconv.FormatBool(f.Bool())
+		case reflect.Float64:
+			m[prefix+name] = fmt.Sprintf("%f", f.Float())
+		case reflect.Struct:
+			addFieldsToMap(m, name+".", f)
+		case reflect.Slice:
+			s, ok := f.Interface().([]string)
+			if !ok {
+				panic("not a []string")
+			}
+			m[prefix+name] = strings.Join(s, ",")
+
+		default:
+			panic(fmt.Sprintf("unknown type: %d // %v", i, f))
+		}
+	}
+}
+
+// Write satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) Write(string) error {
+	return nil
 }
