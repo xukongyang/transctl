@@ -344,6 +344,14 @@ func WithHTTPClient(httpClient *http.Client) ClientOption {
 	}
 }
 
+// WithTimeout is a transmission rpc client option to set the rpc host request
+// tiemout.
+func WithTimeout(timeout time.Duration) ClientOption {
+	return func(cl *Client) {
+		cl.cl.Timeout = timeout
+	}
+}
+
 // WithUserAgent is a transmission rpc client option to set the user agent sent
 // to the rpc host.
 func WithUserAgent(userAgent string) ClientOption {
