@@ -8,8 +8,8 @@ import (
 	"github.com/alecthomas/kingpin"
 )
 
-// Version is the command version.
-var Version = "0.0.0-dev"
+// version is the command version.
+var version = "0.0.0-dev"
 
 func main() {
 	if err := run(); err != nil {
@@ -18,6 +18,7 @@ func main() {
 	}
 }
 
+// run executes the command logic.
 func run() error {
 	// build args
 	args, err := NewArgs()

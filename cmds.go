@@ -64,6 +64,7 @@ func doAdd(args *Args) error {
 
 	var added []transrpc.Torrent
 	for _, v := range args.Args {
+		// build request
 		req := transrpc.TorrentAdd().
 			WithCookiesMap(args.AddParams.Cookies).
 			WithDownloadDir(args.AddParams.DownloadDir).
@@ -71,6 +72,7 @@ func doAdd(args *Args) error {
 			WithPeerLimit(args.AddParams.PeerLimit).
 			WithBandwidthPriority(args.AddParams.BandwidthPriority)
 
+		// determine each arg is magnet link or file on disk
 		isMagnet := magnetRE.MatchString(v)
 		fi, err := os.Stat(v)
 		switch {

@@ -73,11 +73,10 @@ func NewArgs() (*Args, error) {
 	args.AddParams.Cookies = make(map[string]string)
 
 	// global options
-	kingpin.Version(Version)
 	kingpin.Flag("verbose", "toggle verbose").Short('v').Default("false").BoolVar(&args.Verbose)
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
-	kingpin.Flag("context", "config context").Short('c').PlaceHolder("<context>").StringVar(&args.Context)
-	kingpin.Flag("url", "transmission rpc url").Short('U').PlaceHolder("<url>").URLVar(&args.URL)
+	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
+	kingpin.Flag("url", "transmission rpc url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set transctl configuration")
@@ -91,7 +90,7 @@ func NewArgs() (*Args, error) {
 
 	// get command
 	getCmd := kingpin.Command("get", "Get information about torrents")
-	getCmd.Flag("output", "output format").Short('o').StringVar(&args.Output)
+	getCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
 	getCmd.Flag("all", "all torrents").BoolVar(&args.All)
 	getCmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
 
@@ -105,12 +104,19 @@ func NewArgs() (*Args, error) {
 	addCmd.Flag("rm", "remove torrents after adding").BoolVar(&args.AddParams.Remove)
 	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
 
+	// add --version flag
+	kingpin.Flag("version", "display version and exit").PreAction(func(*kingpin.ParseContext) error {
+		fmt.Fprintln(os.Stdout, "transctl", version)
+		os.Exit(0)
+		return nil
+	}).Short('V').Bool()
+
 	return args, nil
 }
 
 // loadConfig loads the configuration file from disk.
 func (args *Args) loadConfig() error {
-	// check if the file exists
+	// check if config file exists, create if not
 	fi, err := os.Stat(args.ConfigFile)
 	switch {
 	case err == nil && fi.IsDir():
@@ -186,7 +192,7 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 
 	// build options
 	opts := []transrpc.ClientOption{
-		transrpc.WithUserAgent("transctl/" + Version),
+		transrpc.WithUserAgent("transctl/" + version),
 		transrpc.WithURL(u.String()),
 	}
 	if args.Verbose {
