@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kenshaw/transrpc"
+	"github.com/knq/snaker"
 	"github.com/xo/tblfmt"
 )
 
@@ -144,6 +145,7 @@ type ConfigStore interface {
 type RemoteConfigStore struct {
 	cl      *transrpc.Client
 	session *transrpc.Session
+	setKeys []string
 }
 
 // NewRemoteConfigStore creates a new remote config store.
@@ -158,7 +160,7 @@ func NewRemoteConfigStore(args *Args) (*RemoteConfigStore, error) {
 		return nil, err
 	}
 
-	return &RemoteConfigStore{cl, session}, nil
+	return &RemoteConfigStore{cl: cl, session: session}, nil
 }
 
 // GetKey satisfies the ConfigStore interface.
@@ -168,6 +170,7 @@ func (r *RemoteConfigStore) GetKey(key string) string {
 
 // SetKey satisfies the ConfigStore interface.
 func (r *RemoteConfigStore) SetKey(key, value string) {
+	r.setKeys = append(r.setKeys, key, value)
 }
 
 // RemoveKey satisfies the ConfigStore interface.
@@ -198,10 +201,10 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 			m[prefix+name] = f.String()
 		case reflect.Int64:
 			m[prefix+name] = strconv.FormatInt(f.Int(), 10)
-		case reflect.Bool:
-			m[prefix+name] = strconv.FormatBool(f.Bool())
 		case reflect.Float64:
 			m[prefix+name] = fmt.Sprintf("%f", f.Float())
+		case reflect.Bool:
+			m[prefix+name] = strconv.FormatBool(f.Bool())
 		case reflect.Struct:
 			addFieldsToMap(m, name+".", f)
 		case reflect.Slice:
@@ -219,5 +222,38 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 
 // Write satisfies the ConfigStore interface.
 func (r *RemoteConfigStore) Write(string) error {
-	return nil
+	req := transrpc.SessionSet()
+	v := reflect.ValueOf(req)
+	for i := 0; i < len(r.setKeys); i += 2 {
+		name := "With" + snaker.ForceCamelIdentifier(r.setKeys[i])
+		f := v.MethodByName(name)
+		if f.Kind() == reflect.Invalid {
+			return fmt.Errorf("unsupported setting --remote option %q", r.setKeys[i])
+		}
+		args := make([]reflect.Value, 1)
+		switch f.Type().In(0).Kind() {
+		case reflect.String:
+			args[0] = reflect.ValueOf(r.setKeys[i+1])
+		case reflect.Int64:
+			z, err := strconv.ParseInt(r.setKeys[i+1], 10, 64)
+			if err != nil {
+				return err
+			}
+			args[0] = reflect.ValueOf(z)
+		case reflect.Float64:
+			z, err := strconv.ParseFloat(r.setKeys[i+1], 64)
+			if err != nil {
+				return err
+			}
+			args[0] = reflect.ValueOf(z)
+		case reflect.Bool:
+			b, err := strconv.ParseBool(r.setKeys[i+1])
+			if err != nil {
+				return err
+			}
+			args[0] = reflect.ValueOf(b)
+		}
+		req = f.Call(args)[0].Interface().(*transrpc.SessionSetRequest)
+	}
+	return req.Do(context.Background(), r.cl)
 }
