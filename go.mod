@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d
-	github.com/kenshaw/transrpc v0.0.0-20191203085700-867fb6bd4645
+	github.com/kenshaw/transrpc v0.0.0-20191203135249-81b2e3469d85
 	github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6
 	github.com/mattn/go-runewidth v0.0.6 // indirect
 	github.com/ryanuber/go-glob v1.0.0

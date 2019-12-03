@@ -114,11 +114,7 @@ func doAdd(args *Args) error {
 		}
 	}
 
-	for _, t := range added {
-		fmt.Fprintf(os.Stdout, "added %d %q (%s)\n", t.ID, t.Name, t.HashString[:defaultShortHashLen])
-	}
-
-	return nil
+	return NewTorrentResult(added).Encode(os.Stdout, args)
 }
 
 // doSet is the high-level entry point for 'set'.
@@ -173,7 +169,69 @@ func doSession(args *Args) error {
 	return nil
 }
 
-// doSessionSet is the high-level entry point for 'session-set'.
-func doSessionSet(args *Args) error {
+// doStats is the high-level entry point for 'stats'.
+func doStats(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+	stats, err := cl.SessionStats(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "%+v", stats)
+	return nil
+}
+
+// doShutdown is the high-level entry point for 'shutdown'.
+func doShutdown(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+	return cl.SessionClose(context.Background())
+}
+
+// doBlocklistUpdate is the high-level entry point for 'blocklist-update'.
+func doBlocklistUpdate(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+	count, err := cl.BlocklistUpdate(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stdout, count)
+	return nil
+}
+
+// doFreeSpace is the high-level entry point for 'free-space'.
+func doFreeSpace(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+	for _, path := range args.Args {
+		size, err := cl.FreeSpace(context.Background(), path)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(os.Stdout, path, size)
+	}
+	return nil
+}
+
+// doPortTest is the high-level entry point for 'port-test'.
+func doPortTest(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+	status, err := cl.PortTest(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "%t\n", status)
 	return nil
 }

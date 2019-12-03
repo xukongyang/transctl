@@ -84,11 +84,18 @@ func run() error {
 		f = doReq(transrpc.QueueMoveUp)
 	case "queue down":
 		f = doReq(transrpc.QueueMoveDown)
-
 	case "session":
 		f = doSession
-	case "session set":
-		f = doSessionSet
+	case "stats":
+		f = doStats
+	case "shutdown":
+		f = doShutdown
+	case "free-space":
+		f = doFreeSpace
+	case "blocklist-update":
+		f = doBlocklistUpdate
+	case "port-test":
+		f = doPortTest
 	}
 
 	return f(args)

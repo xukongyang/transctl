@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/jdxcode/netrc"
@@ -58,6 +59,9 @@ type Args struct {
 	// Config is the loaded settings from the config file.
 	Config *ini.File
 
+	// Timeout is the rpc host request timeout.
+	Timeout time.Duration
+
 	// ConfigParams are the config params.
 	ConfigParams struct {
 		Name  string
@@ -88,6 +92,12 @@ type Args struct {
 	// RemoveParams are the remove params.
 	RemoveParams struct {
 		Remove bool
+	}
+
+	// SessionParams are the session params.
+	SessionParams struct {
+		Name  string
+		Value string
 	}
 
 	// Output is the output format type.
@@ -150,6 +160,7 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.CredentialsWasSet).StringVar(&args.Credentials)
 	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host)
 	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
+	kingpin.Flag("timeout", "request timeout (default: 10s)").Default("10s").PlaceHolder("<d>").DurationVar(&args.Timeout)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set transctl configuration")
@@ -217,6 +228,30 @@ func NewArgs() (*Args, error) {
 
 		cmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
 	}
+
+	// session command
+	sessionCmd := kingpin.Command("session", "Get and set session variables")
+	sessionCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
+	sessionCmd.Flag("all", "all session variables").Short('a').BoolVar(&args.All)
+	sessionCmd.Arg("name", "session variable name").EnumVar(&args.SessionParams.Name)
+	sessionCmd.Arg("value", "session variable value").StringVar(&args.SessionParams.Value)
+
+	// stats command
+	sessionStatsCmd := kingpin.Command("stats", "Get session statistics")
+	sessionStatsCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
+
+	// shutdown command
+	_ = kingpin.Command("shutdown", "Shutdown transmission host")
+
+	// free-space command
+	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
+	freeSpaceCmd.Arg("location", "location").Required().StringsVar(&args.Args)
+
+	// blocklist-update command
+	_ = kingpin.Command("blocklist-update", "Update blocklist")
+
+	// port-test command
+	_ = kingpin.Command("port-test", "Check if external port is open")
 
 	// add --version flag
 	kingpin.Flag("version", "display version and exit").PreAction(func(*kingpin.ParseContext) error {
@@ -321,10 +356,19 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 		}
 	}
 
+	// get timeout
+	timeout := args.Timeout
+	if v := args.getContextKey("timeout"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			timeout = d
+		}
+	}
+
 	// build options
 	opts := []transrpc.ClientOption{
 		transrpc.WithUserAgent("transctl/" + version + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"),
 		transrpc.WithURL(u.String()),
+		transrpc.WithTimeout(timeout),
 	}
 
 	// load netrc credentials
