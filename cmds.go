@@ -30,6 +30,11 @@ func doConfig(args *Args) error {
 	return args.Config.Write(args.ConfigFile)
 }
 
+// doConfigRemote is the high-level entry point for 'config --remote'.
+func doConfigRemote(args *Args) error {
+	return nil
+}
+
 // magnetRE is a regexp for magnet URLs.
 var magnetRE = regexp.MustCompile(`(?i)^magnet:\?`)
 

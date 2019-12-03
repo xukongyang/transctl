@@ -39,8 +39,8 @@ func run() error {
 		"reannounce", "queue top", "queue bottom", "queue up", "queue down":
 		// check exactly one of --recent, --all, or len(args.Args) > 0 conditions
 		switch {
-		case args.All && args.Recent,
-			args.All && len(args.Args) != 0,
+		case args.ListAll && args.Recent,
+			args.ListAll && len(args.Args) != 0,
 			args.Recent && len(args.Args) != 0:
 			return ErrMustSpecifyAllRecentOrAtLeastOneTorrent
 		}

@@ -97,8 +97,8 @@ type Args struct {
 	// Output is the output format type.
 	Output string
 
-	// All is the all toggle.
-	All bool
+	// ListAll is the all toggle.
+	ListAll bool
 
 	// Recent is the recent toggle.
 	Recent bool
@@ -147,22 +147,23 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("verbose", "toggle verbose (default: false)").Short('v').Default("false").BoolVar(&args.Verbose)
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
 	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
-	kingpin.Flag("url", "remote host url").Short('l').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
+	kingpin.Flag("url", "remote host url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
 	kingpin.Flag("netrc", "enable netrc loading (default: true)").Short('n').Default("true").BoolVar(&args.Netrc)
 	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.NetrcFile)
 	kingpin.Flag("proto", "protocol to use (default: http)").Default("http").PlaceHolder("<proto>").StringVar(&args.Proto)
 	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.CredentialsWasSet).StringVar(&args.Credentials)
 	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host)
 	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
-	kingpin.Flag("timeout", "request timeout (default: 10s)").Default("10s").PlaceHolder("<d>").DurationVar(&args.Timeout)
+	kingpin.Flag("timeout", "request timeout (default: 10s)").Default("10s").PlaceHolder("<dur>").DurationVar(&args.Timeout)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set local and remote config")
-	configCmd.Flag("remote", "remote config").Short('R').BoolVar(&args.ConfigParams.Remote)
+	configCmd.Flag("remote", "get or set remote config option").BoolVar(&args.ConfigParams.Remote)
 	configCmd.Arg("name", "option name").StringVar(&args.ConfigParams.Name)
 	configCmd.Arg("value", "option value").StringVar(&args.ConfigParams.Value)
 	configCmd.Flag("unset", "unset value").BoolVar(&args.ConfigParams.Unset)
-	configCmd.Flag("all", "all options").Short('A').BoolVar(&args.All)
+	configCmd.Flag("list", "list all options").Short('l').BoolVar(&args.ListAll)
+	configCmd.Flag("all", "list all options").Hidden().BoolVar(&args.ListAll)
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
@@ -204,7 +205,8 @@ func NewArgs() (*Args, error) {
 		// add command
 		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
 		cmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
-		cmd.Flag("all", "all torrents").Short('A').BoolVar(&args.All)
+		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.ListAll)
+		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
 		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.MatchOrder, "hash", "id", "glob")
 		// cmd.Flag("match-opt", "match option").Short('M').PlaceHolder("<k>=<v>").Default("k=v").StringMapVar(&args.MatchOpts)
@@ -396,7 +398,7 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 	switch {
 	case args.Recent:
 		ids = append(ids, transrpc.RecentlyActive)
-	case args.All:
+	case args.ListAll:
 	default:
 	}
 
@@ -418,7 +420,7 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 
 	// filter torrents
 	var torrents []transrpc.Torrent
-	if args.All || args.Recent {
+	if args.ListAll || args.Recent {
 		torrents = res.Torrents
 	} else {
 		for _, t := range res.Torrents {
