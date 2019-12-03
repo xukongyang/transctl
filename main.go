@@ -3,7 +3,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/alecthomas/kingpin"
@@ -34,8 +33,6 @@ func run() error {
 	if err = args.loadConfig(); err != nil {
 		return err
 	}
-
-	log.Printf(">>> cmd: %s", cmd)
 
 	switch cmd {
 	case "queue":
