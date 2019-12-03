@@ -10,17 +10,6 @@ import (
 	"github.com/kenshaw/transrpc"
 )
 
-/*
-get
-start
-stop
-move
-remove
-verify
-reannounce
-session
-*/
-
 // doConfig is the high-level entry point for 'config'.
 func doConfig(args *Args) error {
 	switch {

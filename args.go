@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -399,8 +398,6 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 
 	return transrpc.NewClient(opts...), nil
 }
-
-var intRE = regexp.MustCompile(`^[0-9]+$`)
 
 // findTorrents finds torrents based on the identifier args.
 func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {

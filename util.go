@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	defaultHost           = `localhost:9091`
 	defaultShortHashLen   = 7
 	minimumHashCompareLen = 5
 	defaultConfig         = `[default]
@@ -44,10 +43,6 @@ const (
 	// ErrInvalidProtoHostOrRpcPath is the invalid proto, host, or rpc-path
 	// error.
 	ErrInvalidProtoHostOrRpcPath Error = "invalid --proto, --host, or --rpc-path"
-
-	// ErrMustSpecifyURLHostOrConfigureTheContextAndContextURL is the must
-	// specify url, host, or configure the context and context.url error.
-	ErrMustSpecifyURLHostOrConfigureTheContextAndContextURL Error = "must specify --url, --host, or configure the context and context.url"
 
 	// ErrInvalidMatchOrder is the invalid match order error.
 	ErrInvalidMatchOrder Error = "invalid match order"
