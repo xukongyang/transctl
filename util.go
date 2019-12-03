@@ -52,8 +52,8 @@ const (
 )
 
 const (
-	// recentlyActive is the recently active identifier.
-	recentlyActive = "recently-active"
+	// RecentlyActive is the recently active identifier.
+	RecentlyActive = "recently-active"
 
 	// csrfHeader is the CSRF header used for transmission rpc sessions.
 	csrfHeader = "X-Transmission-Session-Id"
@@ -111,9 +111,9 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 			// check if "recently-active", if so then no other ids may be
 			// present. also check that a string is a valid sha1 hash
 			switch {
-			case x == recentlyActive && len(ids) != 1:
+			case x == RecentlyActive && len(ids) != 1:
 				return nil, ErrRecentlyActiveCanHaveOnlyOneValue
-			case x != recentlyActive && !sha1RE.MatchString(x):
+			case x != RecentlyActive && !sha1RE.MatchString(x):
 				return nil, ErrInvalidTorrentHash
 			}
 			v = append(v, strings.ToLower(x))
@@ -128,7 +128,7 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 		case int64:
 			return x, nil
 		case string:
-			if x == recentlyActive {
+			if x == RecentlyActive {
 				return x, nil
 			}
 		}
