@@ -228,7 +228,7 @@ func (r *RemoteConfigStore) Write(string) error {
 		name := "With" + snaker.ForceCamelIdentifier(r.setKeys[i])
 		f := v.MethodByName(name)
 		if f.Kind() == reflect.Invalid {
-			return fmt.Errorf("unsupported setting --remote option %q", r.setKeys[i])
+			return fmt.Errorf("unsupported setting --remote config option %q", r.setKeys[i])
 		}
 		args := make([]reflect.Value, 1)
 		switch f.Type().In(0).Kind() {

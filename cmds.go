@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -192,7 +193,17 @@ func doStats(args *Args) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "%+v", stats)
+
+	m := make(map[string]string)
+	addFieldsToMap(m, "", reflect.ValueOf(*stats))
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(os.Stdout, "%s=%s\n", strings.TrimSpace(k), strings.TrimSpace(m[k]))
+	}
 	return nil
 }
 
