@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	defaultURL = `http://transmission:transmission@localhost:9091/transmission/rpc/`
-
-	defaultConfig = `[default]
+	defaultHost         = `localhost:9091`
+	defaultShortHashLen = 7
+	defaultConfig       = `[default]
 	output=table
 `
 )
@@ -36,6 +36,14 @@ const (
 	// ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig is the cannot
 	// specify unsite while trying to set a value with config error.
 	ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig Error = "cannot specify --unset while trying to set a value with config"
+
+	// ErrInvalidProtoHostOrRpcPath is the invalid proto, host, or rpc-path
+	// error.
+	ErrInvalidProtoHostOrRpcPath Error = "invalid --proto, --host, or --rpc-path"
+
+	// ErrMustSpecifyURLHostOrConfigureTheContextAndContextURL is the must
+	// specify url, host, or configure the context and context.url error.
+	ErrMustSpecifyURLHostOrConfigureTheContextAndContextURL Error = "must specify --url, --host, or configure the context and context.url"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
@@ -60,7 +68,7 @@ func (tr *TorrentResult) Next() bool {
 func (tr *TorrentResult) Scan(v ...interface{}) error {
 	*(v[0].(*interface{})) = tr.torrents[tr.index].ID
 	*(v[1].(*interface{})) = tr.torrents[tr.index].Name
-	*(v[2].(*interface{})) = tr.torrents[tr.index].HashString[:8]
+	*(v[2].(*interface{})) = tr.torrents[tr.index].HashString[:defaultShortHashLen]
 	tr.index++
 	return nil
 }

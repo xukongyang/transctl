@@ -7,9 +7,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/jdxcode/netrc"
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/ini"
 )
@@ -24,6 +26,27 @@ type Args struct {
 
 	// URL is the global URL to work with.
 	URL *url.URL
+
+	// Proto is the global proto to use for building URLs.
+	Proto string
+
+	// Host is the global host and port to use for building URLs.
+	Host string
+
+	// RpcPath is the global rpc path to use for building URLs.
+	RpcPath string
+
+	// Credentials is the global user:pass credentials to work with.
+	Credentials string
+
+	// CredentialsWasSet is true when credentials were set on command line.
+	CredentialsWasSet bool
+
+	// NetRC toggles enabling .netrc loading.
+	Netrc bool
+
+	// NetRCFile is the NetRCFile to use.
+	NetrcFile string
 
 	// Context is the global context name.
 	Context string
@@ -60,13 +83,24 @@ type Args struct {
 
 // NewArgs creates the command args.
 func NewArgs() (*Args, error) {
-	// determine config dir
+	// determine netrc path
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	netrcFile := filepath.Join(homeDir, ".netrc")
+	if runtime.GOOS == "windows" {
+		netrcFile = filepath.Join(homeDir, "_netrc")
+	}
+
+	// determine config file path
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return nil, err
 	}
 	configFile := filepath.Join(configDir, "transctl", "config.ini")
 
+	// kingpin settings
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	args := &Args{}
@@ -77,6 +111,12 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
 	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
 	kingpin.Flag("url", "transmission rpc url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
+	kingpin.Flag("netrc", "enable netrc loading (enabled by default)").Short('n').Default("true").BoolVar(&args.Netrc)
+	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.NetrcFile)
+	kingpin.Flag("proto", "protocol to use").Default("http").PlaceHolder("<proto>").StringVar(&args.Proto)
+	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.CredentialsWasSet).StringVar(&args.Credentials)
+	kingpin.Flag("host", "remote host").Short('h').Default("localhost:9091").PlaceHolder("<host>").StringVar(&args.Host)
+	kingpin.Flag("rpc-path", "rpc path").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set transctl configuration")
@@ -96,7 +136,7 @@ func NewArgs() (*Args, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("NAME=VALUE").StringMapVar(&args.AddParams.Cookies)
+	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
 	addCmd.Flag("peer-limit", "peer limit").Short('l').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
@@ -176,25 +216,65 @@ func (args *Args) getContextKey(name string) string {
 
 // newClient builds a transrpc client for use by other commands.
 func (args *Args) newClient() (*transrpc.Client, error) {
-	// determine URL
+	var err error
+
+	// choose specified url first
 	u := args.URL
-	if u == nil {
-		urlstr := args.getContextKey("url")
-		if urlstr == "" {
-			urlstr = defaultURL
+
+	// check if host is specified
+	if u == nil && args.Host != "" {
+		u, err = url.Parse(args.Proto + "://" + args.Host + args.RpcPath)
+		if err != nil {
+			return nil, ErrInvalidProtoHostOrRpcPath
 		}
-		var err error
+	}
+
+	// get context based url
+	if urlstr := args.getContextKey("url"); u == nil && urlstr != "" {
 		u, err = url.Parse(urlstr)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	// add credentials
+	if u.User == nil && args.CredentialsWasSet && args.Credentials != "" {
+		creds := strings.SplitN(args.Credentials, ":", 2)
+		if len(creds) == 2 {
+			u.User = url.UserPassword(creds[0], creds[1])
+		} else {
+			u.User = url.User(creds[0])
+		}
+	}
+
 	// build options
 	opts := []transrpc.ClientOption{
-		transrpc.WithUserAgent("transctl/" + version),
+		transrpc.WithUserAgent("transctl/" + version + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"),
 		transrpc.WithURL(u.String()),
 	}
+
+	// load netrc credentials
+	var setFallback bool
+	if args.Netrc && !args.CredentialsWasSet {
+		fi, err := os.Stat(args.NetrcFile)
+		if err == nil && !fi.IsDir() {
+			if n, err := netrc.Parse(args.NetrcFile); err == nil {
+				if m := n.Machine(u.Hostname()); m != nil {
+					user, pass := m.Get("login"), m.Get("password")
+					if user != "" {
+						setFallback = true
+						opts = append(opts, transrpc.WithCredentialFallback(user, pass))
+					}
+				}
+			}
+		}
+	}
+
+	// set fallback credentials for localhost when none were specified
+	if !setFallback && !args.CredentialsWasSet && u.Hostname() == "localhost" {
+		opts = append(opts, transrpc.WithCredentialFallback("transmission", "transmission"))
+	}
+
 	if args.Verbose {
 		opts = append(opts, transrpc.WithLogf(args.logf(os.Stderr, "> "), args.logf(os.Stderr, "< ")))
 	}

@@ -117,7 +117,7 @@ func doAdd(args *Args) error {
 	}
 
 	for _, t := range added {
-		fmt.Fprintf(os.Stdout, "added %d %q (%s)\n", t.ID, t.Name, t.HashString[:7])
+		fmt.Fprintf(os.Stdout, "added %d %q (%s)\n", t.ID, t.Name, t.HashString[:defaultShortHashLen])
 	}
 
 	return nil
