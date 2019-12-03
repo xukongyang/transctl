@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,6 +33,12 @@ type Client struct {
 	// userAgent is the user agent string sent to the rpc host.
 	userAgent string
 
+	// credentialFallback are the fallback credentials to try with.
+	credentialFallback []string
+
+	// injectCredentialFallback injects the credential fallback.
+	injectCredentialFallback bool
+
 	// retries is the number of times to retry on a error, such as a 409
 	// (http.StatusConflict / missing CSRF token) error.
 	retries int
@@ -55,7 +62,7 @@ func NewClient(opts ...ClientOption) *Client {
 			Timeout: DefaultTimeout,
 		},
 		userAgent: DefaultUserAgent,
-		retries:   3,
+		retries:   5,
 	}
 	for _, o := range opts {
 		o(cl)
@@ -80,7 +87,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 
 	// execute, retrying as per rpc spec
 	var res *http.Response
-	for i := 0; (res == nil || res.StatusCode == http.StatusConflict) && i < cl.retries; i++ {
+	for i := 0; (res == nil || res.StatusCode != http.StatusOK) && i < cl.retries; i++ {
 		// encode envelope + body
 		var body bytes.Buffer
 		if err = json.NewEncoder(&body).Encode(map[string]interface{}{
@@ -91,9 +98,25 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 			return err
 		}
 
+		urlstr := cl.url
+
+		// inject credential fallback
+		if cl.injectCredentialFallback {
+			u, err := url.Parse(urlstr)
+			if err != nil {
+				return err
+			}
+			if cl.credentialFallback[1] == "" {
+				u.User = url.User(cl.credentialFallback[0])
+			} else {
+				u.User = url.UserPassword(cl.credentialFallback[0], cl.credentialFallback[1])
+			}
+			urlstr = u.String()
+		}
+
 		// create http request
 		var req *http.Request
-		if req, err = http.NewRequest("POST", cl.url, bytes.NewReader(body.Bytes())); err != nil {
+		if req, err = http.NewRequest("POST", urlstr, bytes.NewReader(body.Bytes())); err != nil {
 			return err
 		}
 		req.Header.Set("User-Agent", cl.userAgent)
@@ -117,18 +140,29 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 		cl.Unlock()
 
 		// status code check
-		switch res.StatusCode {
-		case http.StatusConflict, http.StatusOK:
-		case http.StatusUnauthorized:
+		switch {
+		case res.StatusCode == http.StatusOK || res.StatusCode == http.StatusConflict:
+		case res.StatusCode == http.StatusUnauthorized && cl.credentialFallback == nil:
 			return ErrUnauthorizedUser
+		case res.StatusCode == http.StatusUnauthorized && cl.credentialFallback != nil:
+			cl.injectCredentialFallback = true
 		default:
 			return ErrUnknownProblemEncountered
 		}
 	}
 
 	// check status
-	if res == nil || res.StatusCode != http.StatusOK {
+	if res == nil {
+		return ErrUnknownProblemEncountered
+	}
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusConflict:
 		return ErrRequestFailed
+	case http.StatusUnauthorized:
+		return ErrUnauthorizedUser
+	default:
+		return ErrUnknownProblemEncountered
 	}
 
 	// decode result
@@ -315,6 +349,14 @@ func WithHTTPClient(httpClient *http.Client) ClientOption {
 func WithUserAgent(userAgent string) ClientOption {
 	return func(cl *Client) {
 		cl.userAgent = userAgent
+	}
+}
+
+// WithCredentialFallback is a transmission rpc client option to set the
+// credential fallback to send to the rpc host.
+func WithCredentialFallback(user, pass string) ClientOption {
+	return func(cl *Client) {
+		cl.credentialFallback = []string{user, pass}
 	}
 }
 
