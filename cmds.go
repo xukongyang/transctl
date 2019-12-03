@@ -30,12 +30,7 @@ func doConfig(args *Args) error {
 	return args.Config.Write(args.ConfigFile)
 }
 
-// doContextSet is the high-level entry point for 'context-set'.
-func doContextSet(args *Args) error {
-	args.Config.SetKey("default.context", args.Context)
-	return args.Config.Write(args.ConfigFile)
-}
-
+// magnetRE is a regexp for magnet URLs.
 var magnetRE = regexp.MustCompile(`(?i)^magnet:\?`)
 
 // doAdd is the high-level entry point for 'add'.
@@ -151,11 +146,6 @@ func doRemove(args *Args) error {
 	return transrpc.TorrentRemove(
 		args.RemoveParams.Remove, convTorrentIDs(torrents)...,
 	).Do(context.Background(), cl)
-}
-
-// doSession is the high-level entry point for 'session'.
-func doSession(args *Args) error {
-	return nil
 }
 
 // doStats is the high-level entry point for 'stats'.

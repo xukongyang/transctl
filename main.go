@@ -35,10 +35,8 @@ func run() error {
 	}
 
 	switch cmd {
-	case "queue":
-
-	case "get", "start", "stop", "move", "remove", "verify", "reannounce",
-		"queue top", "queue bottom", "queue up", "queue down":
+	case "get", "set", "start", "stop", "move", "remove", "verify",
+		"reannounce", "queue top", "queue bottom", "queue up", "queue down":
 		// check exactly one of --recent, --all, or len(args.Args) > 0 conditions
 		switch {
 		case args.All && args.Recent,
@@ -52,14 +50,12 @@ func run() error {
 	switch cmd {
 	case "config":
 		f = doConfig
-	case "context-set":
-		f = doContextSet
 	case "add":
 		f = doAdd
-	case "set":
-		f = doSet
 	case "get":
 		f = doGet
+	case "set":
+		f = doSet
 	case "start":
 		if args.StartParams.Now {
 			f = doReq(transrpc.TorrentStartNow)
@@ -84,8 +80,6 @@ func run() error {
 		f = doReq(transrpc.QueueMoveUp)
 	case "queue down":
 		f = doReq(transrpc.QueueMoveDown)
-	case "session":
-		f = doSession
 	case "stats":
 		f = doStats
 	case "shutdown":

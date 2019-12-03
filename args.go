@@ -63,9 +63,10 @@ type Args struct {
 
 	// ConfigParams are the config params.
 	ConfigParams struct {
-		Name  string
-		Value string
-		Unset bool
+		Remote bool
+		Name   string
+		Value  string
+		Unset  bool
 	}
 
 	// AddParams are the add params.
@@ -91,12 +92,6 @@ type Args struct {
 	// RemoveParams are the remove params.
 	RemoveParams struct {
 		Remove bool
-	}
-
-	// SessionParams are the session params.
-	SessionParams struct {
-		Name  string
-		Value string
 	}
 
 	// Output is the output format type.
@@ -152,7 +147,7 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("verbose", "toggle verbose (default: false)").Short('v').Default("false").BoolVar(&args.Verbose)
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
 	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
-	kingpin.Flag("url", "transmission rpc url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
+	kingpin.Flag("url", "remote host url").Short('l').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
 	kingpin.Flag("netrc", "enable netrc loading (default: true)").Short('n').Default("true").BoolVar(&args.Netrc)
 	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.NetrcFile)
 	kingpin.Flag("proto", "protocol to use (default: http)").Default("http").PlaceHolder("<proto>").StringVar(&args.Proto)
@@ -162,21 +157,19 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("timeout", "request timeout (default: 10s)").Default("10s").PlaceHolder("<d>").DurationVar(&args.Timeout)
 
 	// config command
-	configCmd := kingpin.Command("config", "Get and set transctl configuration")
-	configCmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
-	configCmd.Arg("value", "value").StringVar(&args.ConfigParams.Value)
+	configCmd := kingpin.Command("config", "Get and set local and remote config")
+	configCmd.Flag("remote", "remote config").Short('R').BoolVar(&args.ConfigParams.Remote)
+	configCmd.Arg("name", "option name").StringVar(&args.ConfigParams.Name)
+	configCmd.Arg("value", "option value").StringVar(&args.ConfigParams.Value)
 	configCmd.Flag("unset", "unset value").BoolVar(&args.ConfigParams.Unset)
-
-	// context-set command
-	contextSetCmd := kingpin.Command("context-set", "Set default context")
-	contextSetCmd.Arg("context", "context name").Required().StringVar(&args.Context)
+	configCmd.Flag("all", "all options").Short('A').BoolVar(&args.All)
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
-	addCmd.Flag("peer-limit", "peer limit").Short('l').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
+	addCmd.Flag("peer-limit", "peer limit").Short('L').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("rm", "remove torrents after adding").BoolVar(&args.AddParams.Remove)
 	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
@@ -211,8 +204,8 @@ func NewArgs() (*Args, error) {
 		// add command
 		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
 		cmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
-		cmd.Flag("all", "all torrents").Short('a').BoolVar(&args.All)
-		cmd.Flag("recent", "recently active torrents").Short('t').BoolVar(&args.Recent)
+		cmd.Flag("all", "all torrents").Short('A').BoolVar(&args.All)
+		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
 		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.MatchOrder, "hash", "id", "glob")
 		// cmd.Flag("match-opt", "match option").Short('M').PlaceHolder("<k>=<v>").Default("k=v").StringMapVar(&args.MatchOpts)
 
@@ -228,19 +221,12 @@ func NewArgs() (*Args, error) {
 		cmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
 	}
 
-	// session command
-	sessionCmd := kingpin.Command("session", "Get and set session variables")
-	sessionCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
-	sessionCmd.Flag("all", "all session variables").Short('a').BoolVar(&args.All)
-	sessionCmd.Arg("name", "session variable name").EnumVar(&args.SessionParams.Name)
-	sessionCmd.Arg("value", "session variable value").StringVar(&args.SessionParams.Value)
-
 	// stats command
 	sessionStatsCmd := kingpin.Command("stats", "Get session statistics")
 	sessionStatsCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
 
 	// shutdown command
-	_ = kingpin.Command("shutdown", "Shutdown transmission host")
+	_ = kingpin.Command("shutdown", "Shutdown remote host")
 
 	// free-space command
 	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
