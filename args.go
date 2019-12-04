@@ -335,7 +335,11 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 
 	// default host
 	if u == nil {
-		u, err = url.Parse(args.Proto + "://localhost:9091" + args.RpcPath)
+		host := args.Host
+		if host == "" {
+			host = "localhost:9091"
+		}
+		u, err = url.Parse(args.Proto + "://" + host + args.RpcPath)
 		if err != nil {
 			return nil, err
 		}
