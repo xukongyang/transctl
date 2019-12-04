@@ -333,6 +333,14 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 		}
 	}
 
+	// default host
+	if u == nil {
+		u, err = url.Parse(args.Proto + "://localhost:9091" + args.RpcPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// add credentials
 	if u.User == nil && args.CredentialsWasSet && args.Credentials != "" {
 		creds := strings.SplitN(args.Credentials, ":", 2)
