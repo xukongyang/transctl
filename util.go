@@ -10,7 +10,7 @@ import (
 
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/snaker"
-	"github.com/xo/tblfmt"
+	"github.com/olekukonko/tablewriter"
 )
 
 const (
@@ -120,7 +120,32 @@ func (*TorrentResult) NextResultSet() bool {
 // Encode encodes the torrent result using the settings in args to the
 // io.Writer.
 func (tr *TorrentResult) Encode(w io.Writer, args *Args) error {
-	return tblfmt.EncodeTable(w, tr)
+	// return tblfmt.EncodeTable(w, tr)
+
+	// tablewriter package is temporary until tblfmt is fixed
+	tbl := tablewriter.NewWriter(w)
+	tbl.SetHeader([]string{"ID", "NAME", "HASH"})
+	tbl.SetAutoWrapText(false)
+	tbl.SetAutoFormatHeaders(true)
+	tbl.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	tbl.SetAlignment(tablewriter.ALIGN_LEFT)
+	tbl.SetCenterSeparator("")
+	tbl.SetColumnSeparator("")
+	tbl.SetRowSeparator("")
+	tbl.SetHeaderLine(false)
+	tbl.SetBorder(false)
+	tbl.SetTablePadding("\t") // pad with tabs
+	tbl.SetNoWhiteSpace(true)
+
+	for _, t := range tr.torrents {
+		tbl.Append([]string{
+			strconv.FormatInt(t.ID, 10),
+			t.Name,
+			t.HashString[:defaultShortHashLen],
+		})
+	}
+	tbl.Render()
+	return nil
 }
 
 // convTorrentIDs converts torrent list to a hash string identifier list.
