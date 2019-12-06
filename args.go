@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/gobwas/glob"
 	"github.com/jdxcode/netrc"
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/ini"
-	glob "github.com/ryanuber/go-glob"
 )
 
 // Args holds command args.
@@ -449,6 +449,9 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 	} else {
 		for _, t := range res.Torrents {
 			for _, id := range args.Args {
+				g, err := glob.Compile(id)
+				if err != nil {
+				}
 				for _, m := range matchOrder {
 					switch m {
 					case "id":
@@ -460,7 +463,7 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 							torrents = append(torrents, t)
 						}
 					case "glob":
-						if glob.Glob(id, t.Name) {
+						if err == nil && g.Match(t.Name) {
 							torrents = append(torrents, t)
 						}
 					case "fuzzy":

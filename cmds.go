@@ -186,7 +186,6 @@ func doStats(args *Args) error {
 	if err != nil {
 		return err
 	}
-
 	m := make(map[string]string)
 	addFieldsToMap(m, "", reflect.ValueOf(*stats))
 	var keys []string

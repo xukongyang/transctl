@@ -248,12 +248,10 @@ func NewRemoteConfigStore(args *Args) (*RemoteConfigStore, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	session, err := cl.SessionGet(context.Background())
 	if err != nil {
 		return nil, err
 	}
-
 	return &RemoteConfigStore{cl: cl, session: session}, nil
 }
 
