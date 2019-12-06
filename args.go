@@ -175,6 +175,9 @@ func NewArgs() (*Args, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
+	addCmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml", "flat")
+	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
+	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.SIWasSet).BoolVar(&args.SI)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
