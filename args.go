@@ -247,7 +247,7 @@ func NewArgs() (*Args, error) {
 	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
 	freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
 	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").BoolVar(&args.SI)
-	freeSpaceCmd.Arg("location", "location").Required().StringsVar(&args.Args)
+	freeSpaceCmd.Arg("location", "location").StringsVar(&args.Args)
 
 	// blocklist-update command
 	_ = kingpin.Command("blocklist-update", "Update blocklist")
@@ -318,11 +318,11 @@ func (args *Args) getContextKey(name string) string {
 		context = args.Config.GetKey("default.context")
 	}
 	if context != "" {
-		context = "context." + context
-	} else {
-		context = "default"
+		if v := args.Config.GetKey("context." + context + "." + name); v != "" {
+			return v
+		}
 	}
-	return args.Config.GetKey(context + "." + name)
+	return args.Config.GetKey("default." + name)
 }
 
 // newClient builds a transrpc client for use by other commands.
@@ -444,8 +444,6 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 		for _, t := range res.Torrents {
 			for _, id := range args.Args {
 				g, err := glob.Compile(id)
-				if err != nil {
-				}
 				for _, m := range args.MatchOrder {
 					switch m {
 					case "id":

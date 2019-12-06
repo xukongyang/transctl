@@ -51,6 +51,12 @@ func run() error {
 	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("command.add.rm"))); v != "" && !args.AddParams.RemoveWasSet {
 		args.AddParams.Remove = v == "true" || v == "1"
 	}
+	if v := strings.TrimSpace(args.getContextKey("free-space")); cmd == "free-space" && v != "" && len(args.Args) == 0 {
+		args.Args = strings.Split(v, ",")
+		for i := 0; i < len(args.Args); i++ {
+			args.Args[i] = strings.TrimSpace(args.Args[i])
+		}
+	}
 
 	switch cmd {
 	case "get", "set", "start", "stop", "move", "remove", "verify",
@@ -62,6 +68,10 @@ func run() error {
 			args.Recent && len(args.Args) != 0,
 			!args.ListAll && !args.Recent && len(args.Args) == 0:
 			return ErrMustSpecifyAllRecentOrAtLeastOneTorrent
+		}
+	case "free-space":
+		if len(args.Args) == 0 {
+			return ErrMustSpecifyAtLeastOneLocation
 		}
 	}
 
