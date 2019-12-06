@@ -50,16 +50,9 @@ func doConfig(args *Args) error {
 	}
 
 	// list all
-	m := store.GetMapFlat()
-	keys := make([]string, len(m))
-	i := 0
-	for k := range m {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		fmt.Fprintf(os.Stdout, "%s=%s\n", strings.TrimSpace(k), strings.TrimSpace(m[k]))
+	all := store.GetAllFlat()
+	for i := 0; i < len(all); i += 2 {
+		fmt.Fprintf(os.Stdout, "%s=%s\n", strings.TrimSpace(all[i]), strings.TrimSpace(all[i+1]))
 	}
 
 	return nil

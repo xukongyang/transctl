@@ -14,8 +14,8 @@ github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d h1:Io4Ts9W/92wkP9VKQ
 github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d/go.mod h1:PSWm5RA4GUQ+cyCXiBIIUjlDWdJci5cU3GVKwaQRmW8=
 github.com/kenshaw/transrpc v0.0.0-20191203135249-81b2e3469d85 h1:f9mmc36wSKGiK41ioN7btbULmmGJFJEKvn6POtDA4Qc=
 github.com/kenshaw/transrpc v0.0.0-20191203135249-81b2e3469d85/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
-github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6 h1:KGybd4li3B9B6VNuOS0Y/0gocdFhgicDVjhc4hQRmAk=
-github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6/go.mod h1:EcJhteMzugzx8suTFN/D++EzL5/2OYjOdvb6yWV5+rw=
+github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0 h1:n7acF4Froqc0W/eMlbqyWtG7k6WccLYLVguoX+CazAU=
+github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0/go.mod h1:EcJhteMzugzx8suTFN/D++EzL5/2OYjOdvb6yWV5+rw=
 github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687 h1:ZrOZbqW7T2EgLd4soRATeSZrP3ijy2CgNFXG44cUuS8=
 github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687/go.mod h1:f0Dmq8fkddh8nOsVabYmtOHHdxlq2q4X+LQ1xWQEdUU=
 github.com/mattn/go-runewidth v0.0.7 h1:Ei8KR0497xHyKJPAv59M1dkC+rOZCMBJ+t3fZ+twI54=

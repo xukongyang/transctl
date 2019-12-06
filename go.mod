@@ -8,7 +8,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d
 	github.com/kenshaw/transrpc v0.0.0-20191203135249-81b2e3469d85
-	github.com/knq/ini v0.0.0-20191109065004-cbd1d95dcaf6
+	github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0
 	github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/ryanuber/go-glob v1.0.0

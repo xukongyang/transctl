@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -230,6 +231,7 @@ type ConfigStore interface {
 	SetKey(string, string)
 	RemoveKey(string)
 	GetMapFlat() map[string]string
+	GetAllFlat() []string
 	Write(string) error
 }
 
@@ -275,6 +277,22 @@ func (r *RemoteConfigStore) GetMapFlat() map[string]string {
 	m := make(map[string]string)
 	addFieldsToMap(m, "", reflect.ValueOf(*r.session))
 	return m
+}
+
+// GetAllFlat satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) GetAllFlat() []string {
+	m := make(map[string]string)
+	addFieldsToMap(m, "", reflect.ValueOf(*r.session))
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var ret []string
+	for _, k := range keys {
+		ret = append(ret, k, m[k])
+	}
+	return ret
 }
 
 // addFieldsToMap adds reflected field values to the map.
