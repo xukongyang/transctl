@@ -224,20 +224,27 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 		for i := 0; i < len(cols); i++ {
 			if cols[i] == "shorthash" {
 				row[i] = t.HashString[:defaultShortHashLen]
-			} else {
-				v := reflect.ValueOf(t).Field(fields[cols[i]]).Interface()
-				if x, ok := v.(transrpc.ByteCount); ok {
-					suffix, prec := "", 2
-					if headers[i] == "UP" || headers[i] == "DOWN" {
-						suffix, prec = "/s", 0
-					}
-					if args.Human != "true" && args.Human != "1" && !args.HumanSI {
-						v = fmt.Sprintf("%d%s", x, suffix)
-					} else {
-						v = x.Format(!args.HumanSI, prec, suffix)
-					}
-				}
+				continue
+			}
+
+			v := reflect.ValueOf(t).Field(fields[cols[i]]).Interface()
+			x, ok := v.(transrpc.ByteCount)
+			if !ok {
 				row[i] = fmt.Sprintf("%v", v)
+				continue
+			}
+
+			suffix, prec := "", 2
+			if headers[i] == "UP" || headers[i] == "DOWN" {
+				suffix = "/s"
+			}
+			if args.Human == "true" || args.Human == "1" || args.HumanSI {
+				if args.HumanSI && int64(x) < 1024*1024 || !args.HumanSI && int64(x) < 1000*1000 {
+					prec = 0
+				}
+				row[i] = x.Format(!args.HumanSI, prec, suffix)
+			} else {
+				row[i] = fmt.Sprintf("%d%s", x, suffix)
 			}
 		}
 		tbl.Append(row)
