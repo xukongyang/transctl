@@ -48,11 +48,11 @@ type Status int64
 const (
 	StatusStopped Status = iota
 	StatusCheckWait
-	StatusCheck
+	StatusChecking
 	StatusDownloadWait
-	StatusDownload
+	StatusDownloading
 	StatusSeedWait
-	StatusSeed
+	StatusSeeding
 )
 
 // UnmarshalJSON satisfies the json.Unmarshaler interface.
@@ -65,7 +65,7 @@ func (s *Status) UnmarshalJSON(buf []byte) error {
 		return err
 	}
 	switch x := Status(i); x {
-	case StatusStopped, StatusCheckWait, StatusCheck, StatusDownloadWait, StatusDownload, StatusSeedWait, StatusSeed:
+	case StatusStopped, StatusCheckWait, StatusChecking, StatusDownloadWait, StatusDownloading, StatusSeedWait, StatusSeeding:
 		*s = x
 		return nil
 	}
@@ -104,7 +104,7 @@ type Duration time.Duration
 
 // String satisfies the fmt.Stringer interface.
 func (d Duration) String() string {
-	if int64(d) == -1 {
+	if time.Duration(d) == -1*time.Second {
 		return "Done"
 	}
 	return fmt.Sprintf("%v", time.Duration(d))

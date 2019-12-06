@@ -10,16 +10,16 @@ func _() {
 	var x [1]struct{}
 	_ = x[StatusStopped-0]
 	_ = x[StatusCheckWait-1]
-	_ = x[StatusCheck-2]
+	_ = x[StatusChecking-2]
 	_ = x[StatusDownloadWait-3]
-	_ = x[StatusDownload-4]
+	_ = x[StatusDownloading-4]
 	_ = x[StatusSeedWait-5]
-	_ = x[StatusSeed-6]
+	_ = x[StatusSeeding-6]
 }
 
-const _Status_name = "StoppedCheckWaitCheckDownloadWaitDownloadSeedWaitSeed"
+const _Status_name = "StoppedCheckWaitCheckingDownloadWaitDownloadingSeedWaitSeeding"
 
-var _Status_index = [...]uint8{0, 7, 16, 21, 33, 41, 49, 53}
+var _Status_index = [...]uint8{0, 7, 16, 24, 36, 47, 55, 62}
 
 func (i Status) String() string {
 	if i < 0 || i >= Status(len(_Status_index)-1) {
