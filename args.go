@@ -86,6 +86,7 @@ type Args struct {
 		PeerLimit         int64
 		BandwidthPriority int64
 		Remove            bool
+		RemoveWasSet      bool
 	}
 
 	// StartParams are the start params.
@@ -183,7 +184,7 @@ func NewArgs() (*Args, error) {
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
 	addCmd.Flag("peer-limit", "peer limit").Short('L').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
-	addCmd.Flag("rm", "remove torrents after adding").BoolVar(&args.AddParams.Remove)
+	addCmd.Flag("rm", "remove torrents after adding").IsSetByUser(&args.AddParams.RemoveWasSet).BoolVar(&args.AddParams.Remove)
 	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
 
 	// add retrieval/manipulation commands

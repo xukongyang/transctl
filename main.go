@@ -48,6 +48,9 @@ func run() error {
 			args.MatchOrder[i] = strings.ToLower(strings.TrimSpace(args.MatchOrder[i]))
 		}
 	}
+	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("command.add.rm"))); v != "" && !args.AddParams.RemoveWasSet {
+		args.AddParams.Remove = v == "true" || v == "1"
+	}
 
 	switch cmd {
 	case "get", "set", "start", "stop", "move", "remove", "verify",
