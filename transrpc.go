@@ -75,6 +75,14 @@ func (s *Status) UnmarshalJSON(buf []byte) error {
 // Time wraps time.Time.
 type Time time.Time
 
+// String satisfies the fmt.Stringer interface.
+func (t Time) String() string {
+	if time.Time(t).IsZero() {
+		return "-"
+	}
+	return time.Time(t).Format("2006-01-02 15:04:05")
+}
+
 // UnmarshalJSON satisfies the json.Unmarshaler interface.
 func (t *Time) UnmarshalJSON(buf []byte) error {
 	if len(buf) == 0 {
@@ -96,6 +104,9 @@ type Duration time.Duration
 
 // String satisfies the fmt.Stringer interface.
 func (d Duration) String() string {
+	if int64(d) == -1 {
+		return "Done"
+	}
 	return fmt.Sprintf("%v", time.Duration(d))
 }
 
