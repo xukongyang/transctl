@@ -120,6 +120,11 @@ func (d Duration) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.FormatInt(int64(time.Duration(d)/time.Second), 10)), nil
 }
 
+// MarshalYAML satisfies the yaml.Marshaler interface.
+func (d Duration) MarshalYAML() (interface{}, error) {
+	return int64(time.Duration(d) / time.Second), nil
+}
+
 // Bool wraps int64.
 type Bool bool
 
