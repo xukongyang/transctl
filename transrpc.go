@@ -197,8 +197,7 @@ func (bc ByteCount) String() string {
 func (bc ByteCount) Format(asIEC bool) string {
 	c, suffixes, end := int64(1000), "kMGTPEZY", "B"
 	if asIEC {
-		c, end = 1024, "iB"
-		suffixes = "KMGTPEZY"
+		c, end, suffixes = 1024, "iB", "KMGTPEZY"
 	}
 
 	if int64(bc) < c {
