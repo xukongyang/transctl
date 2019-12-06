@@ -118,9 +118,6 @@ type Args struct {
 	// MatchOrderWasSet is the match order was set toggle.
 	MatchOrderWasSet bool
 
-	// MatchOpts are torrent identifier match order options.
-	// MatchOpts map[string]string
-
 	// Args are torrent identifiers to use.
 	Args []string
 }
@@ -149,7 +146,6 @@ func NewArgs() (*Args, error) {
 
 	// create args
 	args := &Args{}
-	// args.MatchOpts = make(map[string]string)
 	args.AddParams.Cookies = make(map[string]string)
 
 	// global options
@@ -219,7 +215,6 @@ func NewArgs() (*Args, error) {
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Recent)
 		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.MatchOrder, "hash", "id", "glob")
-		// cmd.Flag("match-opt", "match option").Short('M').PlaceHolder("<k>=<v>").Default("k=v").StringMapVar(&args.MatchOpts)
 
 		switch commands[i] {
 		case "start":
@@ -466,7 +461,6 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 						if err == nil && g.Match(t.Name) {
 							torrents = append(torrents, t)
 						}
-					case "fuzzy":
 					default:
 						return nil, nil, ErrInvalidMatchOrder
 					}
