@@ -157,11 +157,7 @@ func (b *Bool) UnmarshalJSON(buf []byte) error {
 
 	// check if string
 	if s := string(buf); s == "false" || s == "true" {
-		v, err := strconv.ParseBool(s)
-		if err != nil {
-			return err
-		}
-		*b = Bool(v)
+		*b = Bool(s == "true")
 		return nil
 	}
 
@@ -176,68 +172,120 @@ func (b *Bool) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
+// MarshalJSON satisfies the json.Marshaler interface.
+func (b Bool) MarshalJSON() ([]byte, error) {
+	if bool(b) {
+		return []byte("1"), nil
+	}
+	return []byte("0"), nil
+}
+
+// MarshalYAML satisfies the yaml.Marshaler interface.
+func (b Bool) MarshalYAML() (interface{}, error) {
+	return bool(b), nil
+}
+
+// ByteCount wraps a byte count as int64.
+type ByteCount int64
+
+// String satisfies the fmt.Stringer interface.
+func (bc ByteCount) String() string {
+	return bc.FormatSI()
+}
+
+// FormatSI formats the byte count in SI format.
+func (bc ByteCount) FormatSI() string {
+	return bc.format(1000, "B", "kMGTPE")
+}
+
+// FormatIEC formats the byte count in IEC format.
+func (bc ByteCount) FormatIEC() string {
+	return bc.format(1024, "iB", "KMGTPE")
+}
+
+// format formats the byte count.
+func (bc ByteCount) format(c int64, end string, suffixes string) string {
+	if int64(bc) < c {
+		return fmt.Sprintf("%d B", bc)
+	}
+	exp, div := 0, c
+	for n := int64(bc) / c; n >= c; n /= c {
+		div *= c
+		exp++
+	}
+	return fmt.Sprintf("%.2f %c%s", float64(bc)/float64(div), suffixes[exp], end)
+}
+
+// Percent wraps a float64.
+type Percent float64
+
+// String satisfies the fmt.Stringer interface.
+func (p Percent) String() string {
+	return fmt.Sprintf("%.f%%", float64(p)*100)
+}
+
 // Torrent holds information about a torrent.
 type Torrent struct {
-	ActivityDate      Time     `json:"activityDate,omitempty" yaml:"activityDate,omitempty"`           // tr_stat
-	AddedDate         Time     `json:"addedDate,omitempty" yaml:"addedDate,omitempty"`                 // tr_stat
-	BandwidthPriority int64    `json:"bandwidthPriority,omitempty" yaml:"bandwidthPriority,omitempty"` // tr_priority_t
-	Comment           string   `json:"comment,omitempty" yaml:"comment,omitempty"`                     // tr_info
-	CorruptEver       int64    `json:"corruptEver,omitempty" yaml:"corruptEver,omitempty"`             // tr_stat
-	Creator           string   `json:"creator,omitempty" yaml:"creator,omitempty"`                     // tr_info
-	DateCreated       Time     `json:"dateCreated,omitempty" yaml:"dateCreated,omitempty"`             // tr_info
-	DesiredAvailable  int64    `json:"desiredAvailable,omitempty" yaml:"desiredAvailable,omitempty"`   // tr_stat
-	DoneDate          Time     `json:"doneDate,omitempty" yaml:"doneDate,omitempty"`                   // tr_stat
-	DownloadDir       string   `json:"downloadDir,omitempty" yaml:"downloadDir,omitempty"`             // tr_torrent
-	DownloadedEver    int64    `json:"downloadedEver,omitempty" yaml:"downloadedEver,omitempty"`       // tr_stat
-	DownloadLimit     int64    `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`         // tr_torrent
-	DownloadLimited   bool     `json:"downloadLimited,omitempty" yaml:"downloadLimited,omitempty"`     // tr_torrent
-	Error             int64    `json:"error,omitempty" yaml:"error,omitempty"`                         // tr_stat
-	ErrorString       string   `json:"errorString,omitempty" yaml:"errorString,omitempty"`             // tr_stat
-	Eta               Duration `json:"eta,omitempty" yaml:"eta,omitempty"`                             // tr_stat
-	EtaIdle           Duration `json:"etaIdle,omitempty" yaml:"etaIdle,omitempty"`                     // tr_stat
+	ActivityDate      Time      `json:"activityDate,omitempty" yaml:"activityDate,omitempty"`           // tr_stat
+	AddedDate         Time      `json:"addedDate,omitempty" yaml:"addedDate,omitempty"`                 // tr_stat
+	BandwidthPriority int64     `json:"bandwidthPriority,omitempty" yaml:"bandwidthPriority,omitempty"` // tr_priority_t
+	Comment           string    `json:"comment,omitempty" yaml:"comment,omitempty"`                     // tr_info
+	CorruptEver       ByteCount `json:"corruptEver,omitempty" yaml:"corruptEver,omitempty"`             // tr_stat
+	Creator           string    `json:"creator,omitempty" yaml:"creator,omitempty"`                     // tr_info
+	DateCreated       Time      `json:"dateCreated,omitempty" yaml:"dateCreated,omitempty"`             // tr_info
+	DesiredAvailable  ByteCount `json:"desiredAvailable,omitempty" yaml:"desiredAvailable,omitempty"`   // tr_stat
+	DoneDate          Time      `json:"doneDate,omitempty" yaml:"doneDate,omitempty"`                   // tr_stat
+	DownloadDir       string    `json:"downloadDir,omitempty" yaml:"downloadDir,omitempty"`             // tr_torrent
+	DownloadedEver    ByteCount `json:"downloadedEver,omitempty" yaml:"downloadedEver,omitempty"`       // tr_stat
+	DownloadLimit     ByteCount `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`         // tr_torrent
+	DownloadLimited   bool      `json:"downloadLimited,omitempty" yaml:"downloadLimited,omitempty"`     // tr_torrent
+	Error             int64     `json:"error,omitempty" yaml:"error,omitempty"`                         // tr_stat
+	ErrorString       string    `json:"errorString,omitempty" yaml:"errorString,omitempty"`             // tr_stat
+	Eta               Duration  `json:"eta,omitempty" yaml:"eta,omitempty"`                             // tr_stat
+	EtaIdle           Duration  `json:"etaIdle,omitempty" yaml:"etaIdle,omitempty"`                     // tr_stat
 	Files             []struct {
-		BytesCompleted int64  `json:"bytesCompleted,omitempty" yaml:"bytesCompleted,omitempty"` // tr_torrent
-		Length         int64  `json:"length,omitempty" yaml:"length,omitempty"`                 // tr_info
-		Name           string `json:"name,omitempty" yaml:"name,omitempty"`                     // tr_info
+		BytesCompleted ByteCount `json:"bytesCompleted,omitempty" yaml:"bytesCompleted,omitempty"` // tr_torrent
+		Length         ByteCount `json:"length,omitempty" yaml:"length,omitempty"`                 // tr_info
+		Name           string    `json:"name,omitempty" yaml:"name,omitempty"`                     // tr_info
 	} `json:"files,omitempty" yaml:"files,omitempty"` // n/a
 	FileStats []struct {
-		BytesCompleted int64    `json:"bytesCompleted,omitempty" yaml:"bytesCompleted,omitempty"` // tr_torrent
-		Wanted         bool     `json:"wanted,omitempty" yaml:"wanted,omitempty"`                 // tr_info
-		Priority       Priority `json:"priority,omitempty" yaml:"priority,omitempty"`             // tr_info
+		BytesCompleted ByteCount `json:"bytesCompleted,omitempty" yaml:"bytesCompleted,omitempty"` // tr_torrent
+		Wanted         bool      `json:"wanted,omitempty" yaml:"wanted,omitempty"`                 // tr_info
+		Priority       Priority  `json:"priority,omitempty" yaml:"priority,omitempty"`             // tr_info
 	} `json:"fileStats,omitempty" yaml:"fileStats,omitempty"` // n/a
-	HashString              string   `json:"hashString,omitempty" yaml:"hashString,omitempty"`                           // tr_info
-	HaveUnchecked           int64    `json:"haveUnchecked,omitempty" yaml:"haveUnchecked,omitempty"`                     // tr_stat
-	HaveValid               int64    `json:"haveValid,omitempty" yaml:"haveValid,omitempty"`                             // tr_stat
-	HonorsSessionLimits     bool     `json:"honorsSessionLimits,omitempty" yaml:"honorsSessionLimits,omitempty"`         // tr_torrent
-	ID                      int64    `json:"id,omitempty" yaml:"id,omitempty"`                                           // tr_torrent
-	IsFinished              bool     `json:"isFinished,omitempty" yaml:"isFinished,omitempty"`                           // tr_stat
-	IsPrivate               bool     `json:"isPrivate,omitempty" yaml:"isPrivate,omitempty"`                             // tr_torrent
-	IsStalled               bool     `json:"isStalled,omitempty" yaml:"isStalled,omitempty"`                             // tr_stat
-	Labels                  []string `json:"labels,omitempty" yaml:"labels,omitempty"`                                   // tr_torrent
-	LeftUntilDone           int64    `json:"leftUntilDone,omitempty" yaml:"leftUntilDone,omitempty"`                     // tr_stat
-	MagnetLink              string   `json:"magnetLink,omitempty" yaml:"magnetLink,omitempty"`                           // n/a
-	ManualAnnounceTime      int64    `json:"manualAnnounceTime,omitempty" yaml:"manualAnnounceTime,omitempty"`           // tr_stat
-	MaxConnectedPeers       int64    `json:"maxConnectedPeers,omitempty" yaml:"maxConnectedPeers,omitempty"`             // tr_torrent
-	MetadataPercentComplete float64  `json:"metadataPercentComplete,omitempty" yaml:"metadataPercentComplete,omitempty"` // tr_stat
-	Name                    string   `json:"name,omitempty" yaml:"name,omitempty"`                                       // tr_info
-	PeerLimit               int64    `json:"peer-limit,omitempty" yaml:"peer-limit,omitempty"`                           // tr_torrent
+	HashString              string    `json:"hashString,omitempty" yaml:"hashString,omitempty"`                           // tr_info
+	HaveUnchecked           ByteCount `json:"haveUnchecked,omitempty" yaml:"haveUnchecked,omitempty"`                     // tr_stat
+	HaveValid               ByteCount `json:"haveValid,omitempty" yaml:"haveValid,omitempty"`                             // tr_stat
+	HonorsSessionLimits     bool      `json:"honorsSessionLimits,omitempty" yaml:"honorsSessionLimits,omitempty"`         // tr_torrent
+	ID                      int64     `json:"id,omitempty" yaml:"id,omitempty"`                                           // tr_torrent
+	IsFinished              bool      `json:"isFinished,omitempty" yaml:"isFinished,omitempty"`                           // tr_stat
+	IsPrivate               bool      `json:"isPrivate,omitempty" yaml:"isPrivate,omitempty"`                             // tr_torrent
+	IsStalled               bool      `json:"isStalled,omitempty" yaml:"isStalled,omitempty"`                             // tr_stat
+	Labels                  []string  `json:"labels,omitempty" yaml:"labels,omitempty"`                                   // tr_torrent
+	LeftUntilDone           ByteCount `json:"leftUntilDone,omitempty" yaml:"leftUntilDone,omitempty"`                     // tr_stat
+	MagnetLink              string    `json:"magnetLink,omitempty" yaml:"magnetLink,omitempty"`                           // n/a
+	ManualAnnounceTime      Duration  `json:"manualAnnounceTime,omitempty" yaml:"manualAnnounceTime,omitempty"`           // tr_stat
+	MaxConnectedPeers       int64     `json:"maxConnectedPeers,omitempty" yaml:"maxConnectedPeers,omitempty"`             // tr_torrent
+	MetadataPercentComplete Percent   `json:"metadataPercentComplete,omitempty" yaml:"metadataPercentComplete,omitempty"` // tr_stat
+	Name                    string    `json:"name,omitempty" yaml:"name,omitempty"`                                       // tr_info
+	PeerLimit               int64     `json:"peer-limit,omitempty" yaml:"peer-limit,omitempty"`                           // tr_torrent
 	Peers                   []struct {
-		Address            string  `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
-		ClientName         string  `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
-		ClientIsChoked     bool    `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
-		ClientIsInterested bool    `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
-		FlagStr            string  `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
-		IsDownloadingFrom  bool    `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
-		IsEncrypted        bool    `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
-		IsIncoming         bool    `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
-		IsUploadingTo      bool    `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
-		IsUTP              bool    `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
-		PeerIsChoked       bool    `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
-		PeerIsInterested   bool    `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
-		Port               int64   `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
-		Progress           float64 `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
-		RateToClient       int64   `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
-		RateToPeer         int64   `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
+		Address            string    `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
+		ClientName         string    `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
+		ClientIsChoked     bool      `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
+		ClientIsInterested bool      `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
+		FlagStr            string    `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
+		IsDownloadingFrom  bool      `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
+		IsEncrypted        bool      `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
+		IsIncoming         bool      `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
+		IsUploadingTo      bool      `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
+		IsUTP              bool      `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
+		PeerIsChoked       bool      `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
+		PeerIsInterested   bool      `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
+		Port               int64     `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
+		Progress           Percent   `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
+		RateToClient       ByteCount `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
+		RateToPeer         ByteCount `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
 	} `json:"peers,omitempty" yaml:"peers,omitempty"` // n/a
 	PeersConnected int64 `json:"peersConnected,omitempty" yaml:"peersConnected,omitempty"` // tr_stat
 	PeersFrom      struct {
@@ -251,22 +299,22 @@ type Torrent struct {
 	} `json:"peersFrom,omitempty" yaml:"peersFrom,omitempty"` // n/a
 	PeersGettingFromUs int64      `json:"peersGettingFromUs,omitempty" yaml:"peersGettingFromUs,omitempty"` // tr_stat
 	PeersSendingToUs   int64      `json:"peersSendingToUs,omitempty" yaml:"peersSendingToUs,omitempty"`     // tr_stat
-	PercentDone        float64    `json:"percentDone,omitempty" yaml:"percentDone,omitempty"`               // tr_stat
+	PercentDone        Percent    `json:"percentDone,omitempty" yaml:"percentDone,omitempty"`               // tr_stat
 	Pieces             []byte     `json:"pieces,omitempty" yaml:"pieces,omitempty"`                         // tr_torrent
 	PieceCount         int64      `json:"pieceCount,omitempty" yaml:"pieceCount,omitempty"`                 // tr_info
-	PieceSize          int64      `json:"pieceSize,omitempty" yaml:"pieceSize,omitempty"`                   // tr_info
+	PieceSize          ByteCount  `json:"pieceSize,omitempty" yaml:"pieceSize,omitempty"`                   // tr_info
 	Priorities         []Priority `json:"priorities,omitempty" yaml:"priorities,omitempty"`                 // n/a
 	QueuePosition      int64      `json:"queuePosition,omitempty" yaml:"queuePosition,omitempty"`           // tr_stat
-	RateDownload       int64      `json:"rateDownload,omitempty" yaml:"rateDownload,omitempty"`             // tr_stat
-	RateUpload         int64      `json:"rateUpload,omitempty" yaml:"rateUpload,omitempty"`                 // tr_stat
-	RecheckProgress    float64    `json:"recheckProgress,omitempty" yaml:"recheckProgress,omitempty"`       // tr_stat
+	RateDownload       ByteCount  `json:"rateDownload,omitempty" yaml:"rateDownload,omitempty"`             // tr_stat
+	RateUpload         ByteCount  `json:"rateUpload,omitempty" yaml:"rateUpload,omitempty"`                 // tr_stat
+	RecheckProgress    Percent    `json:"recheckProgress,omitempty" yaml:"recheckProgress,omitempty"`       // tr_stat
 	SecondsDownloading Duration   `json:"secondsDownloading,omitempty" yaml:"secondsDownloading,omitempty"` // tr_stat
 	SecondsSeeding     Duration   `json:"secondsSeeding,omitempty" yaml:"secondsSeeding,omitempty"`         // tr_stat
 	SeedIdleLimit      int64      `json:"seedIdleLimit,omitempty" yaml:"seedIdleLimit,omitempty"`           // tr_torrent
 	SeedIdleMode       int64      `json:"seedIdleMode,omitempty" yaml:"seedIdleMode,omitempty"`             // tr_inactvelimit
 	SeedRatioLimit     float64    `json:"seedRatioLimit,omitempty" yaml:"seedRatioLimit,omitempty"`         // tr_torrent
 	SeedRatioMode      int64      `json:"seedRatioMode,omitempty" yaml:"seedRatioMode,omitempty"`           // tr_ratiolimit
-	SizeWhenDone       int64      `json:"sizeWhenDone,omitempty" yaml:"sizeWhenDone,omitempty"`             // tr_stat
+	SizeWhenDone       ByteCount  `json:"sizeWhenDone,omitempty" yaml:"sizeWhenDone,omitempty"`             // tr_stat
 	StartDate          Time       `json:"startDate,omitempty" yaml:"startDate,omitempty"`                   // tr_stat
 	Status             Status     `json:"status,omitempty" yaml:"status,omitempty"`                         // tr_stat
 	Trackers           []struct {
@@ -303,15 +351,15 @@ type Torrent struct {
 		SeederCount           int64  `json:"seederCount,omitempty" yaml:"seederCount,omitempty"`                     // tr_tracker_stat
 		Tier                  int64  `json:"tier,omitempty" yaml:"tier,omitempty"`                                   // tr_tracker_stat
 	} `json:"trackerStats,omitempty" yaml:"trackerStats,omitempty"` // n/a
-	TotalSize           int64    `json:"totalSize,omitempty" yaml:"totalSize,omitempty"`                     // tr_info
-	TorrentFile         string   `json:"torrentFile,omitempty" yaml:"torrentFile,omitempty"`                 // tr_info
-	UploadedEver        int64    `json:"uploadedEver,omitempty" yaml:"uploadedEver,omitempty"`               // tr_stat
-	UploadLimit         int64    `json:"uploadLimit,omitempty" yaml:"uploadLimit,omitempty"`                 // tr_torrent
-	UploadLimited       bool     `json:"uploadLimited,omitempty" yaml:"uploadLimited,omitempty"`             // tr_torrent
-	UploadRatio         float64  `json:"uploadRatio,omitempty" yaml:"uploadRatio,omitempty"`                 // tr_stat
-	Wanted              []Bool   `json:"wanted,omitempty" yaml:"wanted,omitempty"`                           // n/a
-	Webseeds            []string `json:"webseeds,omitempty" yaml:"webseeds,omitempty"`                       // n/a
-	WebseedsSendingToUs int64    `json:"webseedsSendingToUs,omitempty" yaml:"webseedsSendingToUs,omitempty"` // tr_stat
+	TotalSize           ByteCount `json:"totalSize,omitempty" yaml:"totalSize,omitempty"`                     // tr_info
+	TorrentFile         string    `json:"torrentFile,omitempty" yaml:"torrentFile,omitempty"`                 // tr_info
+	UploadedEver        ByteCount `json:"uploadedEver,omitempty" yaml:"uploadedEver,omitempty"`               // tr_stat
+	UploadLimit         int64     `json:"uploadLimit,omitempty" yaml:"uploadLimit,omitempty"`                 // tr_torrent
+	UploadLimited       bool      `json:"uploadLimited,omitempty" yaml:"uploadLimited,omitempty"`             // tr_torrent
+	UploadRatio         float64   `json:"uploadRatio,omitempty" yaml:"uploadRatio,omitempty"`                 // tr_stat
+	Wanted              []Bool    `json:"wanted,omitempty" yaml:"wanted,omitempty"`                           // n/a
+	Webseeds            []string  `json:"webseeds,omitempty" yaml:"webseeds,omitempty"`                       // n/a
+	WebseedsSendingToUs int64     `json:"webseedsSendingToUs,omitempty" yaml:"webseedsSendingToUs,omitempty"` // tr_stat
 }
 
 // Request is a generic request used when working with a list of torrent

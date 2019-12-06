@@ -142,3 +142,19 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 
 	return v, nil
 }
+
+// max returns the max of a, b.
+func max(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// min returns the min of a, b.
+func min(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
