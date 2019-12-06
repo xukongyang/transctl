@@ -41,7 +41,8 @@ func run() error {
 		switch {
 		case args.ListAll && args.Recent,
 			args.ListAll && len(args.Args) != 0,
-			args.Recent && len(args.Args) != 0:
+			args.Recent && len(args.Args) != 0,
+			!args.ListAll && !args.Recent && len(args.Args) == 0:
 			return ErrMustSpecifyAllRecentOrAtLeastOneTorrent
 		}
 	}

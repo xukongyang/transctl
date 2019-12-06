@@ -93,6 +93,7 @@ func (tr *TorrentResult) Next() bool {
 
 // Scan satisfies the tblfmt.ResultSet interface.
 func (tr *TorrentResult) Scan(v ...interface{}) error {
+	// TODO: fix this and use tblfmt again
 	*(v[0].(*interface{})) = tr.torrents[tr.index].ID
 	*(v[1].(*interface{})) = tr.torrents[tr.index].Name
 	*(v[2].(*interface{})) = tr.torrents[tr.index].HashString[:defaultShortHashLen]
@@ -147,9 +148,17 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 	return f(w, args, cl)
 }
 
+// headerNames are column header names.
+var headerNames = map[string]string{
+	"RATE DOWNLOAD": "DOWN",
+	"RATE UPLOAD":   "UP",
+	"HAVE VALID":    "HAVE",
+	"PERCENT DONE":  "%",
+}
+
 // encodeTableColumns encodes the specified table results with the included
 // columns.
-func (tr *TorrentResult) encodeTableColumns(w io.Writer, cl *transrpc.Client, cols ...string) error {
+func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrpc.Client, cols ...string) error {
 	// check field names
 	typ := reflect.TypeOf(transrpc.Torrent{})
 	fields := make(map[string]int, typ.NumField())
@@ -173,6 +182,9 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, cl *transrpc.Client, co
 			return fmt.Errorf("invalid torrent field %q", c)
 		}
 		headers[i] = strings.ReplaceAll(strings.ToUpper(snaker.CamelToSnakeIdentifier(typ.Field(n).Name)), "_", " ")
+		if h, ok := headerNames[headers[i]]; ok {
+			headers[i] = h
+		}
 		fieldnames[i] = c
 	}
 
@@ -209,7 +221,19 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, cl *transrpc.Client, co
 			if cols[i] == "shorthash" {
 				row[i] = t.HashString[:defaultShortHashLen]
 			} else {
-				row[i] = fmt.Sprintf("%v", reflect.ValueOf(t).Field(fields[cols[i]]))
+				v := reflect.ValueOf(t).Field(fields[cols[i]]).Interface()
+				if x, ok := v.(transrpc.ByteCount); ok {
+					suffix, prec := "", 2
+					if headers[i] == "UP" || headers[i] == "DOWN" {
+						suffix, prec = "/s", 0
+					}
+					if args.Human != "true" && args.Human != "1" && !args.HumanSI {
+						v = fmt.Sprintf("%d%s", x, suffix)
+					} else {
+						v = x.Format(args.HumanSI, prec, suffix)
+					}
+				}
+				row[i] = fmt.Sprintf("%v", v)
 			}
 		}
 		tbl.Append(row)
@@ -221,13 +245,12 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, cl *transrpc.Client, co
 
 // encodeTable encodes the torrent results to the writer as a table.
 func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Client) error {
-	return tr.encodeTableColumns(w, cl, "id", "name", "uploadRatio", "eta", "status", "shorthash")
+	return tr.encodeTableColumns(w, args, cl, "id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone")
 }
 
 // encodeWide encodes the torrent results to the writer as a table.
 func (tr *TorrentResult) encodeWide(w io.Writer, args *Args, cl *transrpc.Client) error {
-	//  Have  ETA           Up    Down  Ratio  Status
-	return tr.encodeTableColumns(w, cl, "id", "name", "shorthash")
+	return tr.encodeTableColumns(w, args, cl, "id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone")
 }
 
 // encodeJSON encodes the torrent results to the writer as a table.
