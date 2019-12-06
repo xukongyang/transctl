@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -11,6 +13,7 @@ import (
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/snaker"
 	"github.com/olekukonko/tablewriter"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -64,6 +67,10 @@ const (
 	// ErrMustSpecifyConfigOptionNameToUnset is the must specify config option
 	// name to unset error.
 	ErrMustSpecifyConfigOptionNameToUnset Error = "must specify config option name to --unset"
+
+	// ErrInvalidOutputOptionSpecified is the invalid output option specified
+	// error.
+	ErrInvalidOutputOptionSpecified Error = "invalid --output option specified"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
@@ -119,7 +126,29 @@ func (*TorrentResult) NextResultSet() bool {
 
 // Encode encodes the torrent result using the settings in args to the
 // io.Writer.
-func (tr *TorrentResult) Encode(w io.Writer, args *Args) error {
+func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) error {
+	output := args.Output
+	if o := args.Config.GetKey("default.output"); o != "" && !args.OutputWasSet {
+		output = o
+	}
+	var f func(io.Writer, *Args, *transrpc.Client) error
+	switch output {
+	case "table":
+		f = tr.encodeTable
+	case "wide":
+		f = tr.encodeWide
+	case "json":
+		f = tr.encodeJSON
+	case "yaml":
+		f = tr.encodeYaml
+	default:
+		return ErrInvalidOutputOptionSpecified
+	}
+	return f(w, args, cl)
+}
+
+// encodeTable encodes the torrent results to the writer as a table.
+func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Client) error {
 	// return tblfmt.EncodeTable(w, tr)
 
 	// tablewriter package is temporary until tblfmt is fixed
@@ -136,7 +165,6 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args) error {
 	tbl.SetBorder(false)
 	tbl.SetTablePadding("\t") // pad with tabs
 	tbl.SetNoWhiteSpace(true)
-
 	for _, t := range tr.torrents {
 		tbl.Append([]string{
 			strconv.FormatInt(t.ID, 10),
@@ -145,6 +173,45 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args) error {
 		})
 	}
 	tbl.Render()
+	return nil
+}
+
+// encodeWide encodes the torrent results to the writer as a table.
+func (tr *TorrentResult) encodeWide(w io.Writer, args *Args, cl *transrpc.Client) error {
+	return errors.New("not implemented")
+}
+
+// encodeJSON encodes the torrent results to the writer as a table.
+func (tr *TorrentResult) encodeJSON(w io.Writer, args *Args, cl *transrpc.Client) error {
+	ids := make([]interface{}, len(tr.torrents))
+	for i := 0; i < len(tr.torrents); i++ {
+		ids[i] = tr.torrents[i].HashString
+	}
+	res, err := cl.TorrentGet(context.Background(), ids...)
+	if err != nil {
+		return err
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(res.Torrents)
+}
+
+// encodeYaml encodes the torrent results to the writer as a table.
+func (tr *TorrentResult) encodeYaml(w io.Writer, args *Args, cl *transrpc.Client) error {
+	ids := make([]interface{}, len(tr.torrents))
+	for i := 0; i < len(tr.torrents); i++ {
+		ids[i] = tr.torrents[i].HashString
+	}
+	res, err := cl.TorrentGet(context.Background(), ids...)
+	if err != nil {
+		return err
+	}
+	for _, t := range res.Torrents {
+		fmt.Fprintln(w, "---")
+		if err = yaml.NewEncoder(w).Encode(t); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -219,7 +286,7 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 		if tag == "" || tag == "-" {
 			continue
 		}
-		name := strings.SplitN(tag, ",", 2)[0]
+		name := strings.ReplaceAll(snaker.CamelToSnakeIdentifier(strings.SplitN(tag, ",", 2)[0]), "_", "-")
 		f := v.Field(i)
 		switch f.Kind() {
 		case reflect.String:

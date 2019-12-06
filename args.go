@@ -61,6 +61,12 @@ type Args struct {
 	// Timeout is the rpc host request timeout.
 	Timeout time.Duration
 
+	// Human is the toggle to display sizes in powers of 1024 (ie, 1023M)
+	Human bool
+
+	// HumanSI is the toggle to display sizes in powers of 1000 (ie, 1.1G)
+	HumanSI bool
+
 	// ConfigParams are the config params.
 	ConfigParams struct {
 		Remote bool
@@ -96,6 +102,9 @@ type Args struct {
 
 	// Output is the output format type.
 	Output string
+
+	// OutputWasSet is the output was set toggle.
+	OutputWasSet bool
 
 	// ListAll is the all toggle.
 	ListAll bool
@@ -154,7 +163,7 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.CredentialsWasSet).StringVar(&args.Credentials)
 	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host)
 	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
-	kingpin.Flag("timeout", "request timeout (default: 10s)").Default("10s").PlaceHolder("<dur>").DurationVar(&args.Timeout)
+	kingpin.Flag("timeout", "request timeout (default: 25s)").Default("25s").PlaceHolder("<dur>").DurationVar(&args.Timeout)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set local and remote config")
@@ -204,10 +213,11 @@ func NewArgs() (*Args, error) {
 
 		// add command
 		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
-		cmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
+		cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml")
 		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.ListAll)
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
+		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Recent)
 		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.MatchOrder, "hash", "id", "glob")
 		// cmd.Flag("match-opt", "match option").Short('M').PlaceHolder("<k>=<v>").Default("k=v").StringMapVar(&args.MatchOpts)
 
@@ -225,13 +235,15 @@ func NewArgs() (*Args, error) {
 
 	// stats command
 	sessionStatsCmd := kingpin.Command("stats", "Get session statistics")
-	sessionStatsCmd.Flag("output", "output format").Short('o').PlaceHolder("<format>").EnumVar(&args.Output, "table", "wide", "json", "yaml")
+	sessionStatsCmd.Flag("output", "output format (default: table)").Short('o').Default("table").PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml")
 
 	// shutdown command
 	_ = kingpin.Command("shutdown", "Shutdown remote host")
 
 	// free-space command
 	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
+	// freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023M) (default: true)").Default("true").Short('h').BoolVar(&args.Human)
+	// freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").Short('H').BoolVar(&args.HumanSI)
 	freeSpaceCmd.Arg("location", "location").Required().StringsVar(&args.Args)
 
 	// blocklist-update command

@@ -12,4 +12,5 @@ require (
 	github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/ryanuber/go-glob v1.0.0
+	gopkg.in/yaml.v2 v2.2.7
 )

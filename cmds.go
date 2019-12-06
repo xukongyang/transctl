@@ -133,7 +133,7 @@ func doAdd(args *Args) error {
 		}
 	}
 
-	return NewTorrentResult(added).Encode(os.Stdout, args)
+	return NewTorrentResult(added).Encode(os.Stdout, args, cl)
 }
 
 // doSet is the high-level entry point for 'set'.
@@ -143,11 +143,11 @@ func doSet(args *Args) error {
 
 // doGet is the high-level entry point for 'get'.
 func doGet(args *Args) error {
-	_, torrents, err := args.findTorrents()
+	cl, torrents, err := args.findTorrents()
 	if err != nil {
 		return err
 	}
-	return NewTorrentResult(torrents).Encode(os.Stdout, args)
+	return NewTorrentResult(torrents).Encode(os.Stdout, args, cl)
 }
 
 // do is the high-level entry point for 'start'.
