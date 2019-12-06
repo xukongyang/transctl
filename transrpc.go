@@ -1698,10 +1698,10 @@ func FreeSpace(path string) *FreeSpaceRequest {
 }
 
 // Do executes the free space request against the provided context and client.
-func (req *FreeSpaceRequest) Do(ctx context.Context, cl *Client) (int64, error) {
+func (req *FreeSpaceRequest) Do(ctx context.Context, cl *Client) (ByteCount, error) {
 	var res struct {
-		Path      string `json:"path,omitempty" yaml:"path,omitempty"`
-		SizeBytes int64  `json:"size-bytes,omitempty" yaml:"size-bytes,omitempty"`
+		Path      string    `json:"path,omitempty" yaml:"path,omitempty"`
+		SizeBytes ByteCount `json:"size-bytes,omitempty" yaml:"size-bytes,omitempty"`
 	}
 	if err := cl.Do(ctx, "free-space", req, &res); err != nil {
 		return 0, err

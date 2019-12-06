@@ -301,7 +301,7 @@ func (cl *Client) QueueMoveBottom(ctx context.Context, ids ...interface{}) error
 }
 
 // FreeSpace issues a free space request.
-func (cl *Client) FreeSpace(ctx context.Context, path string) (int64, error) {
+func (cl *Client) FreeSpace(ctx context.Context, path string) (ByteCount, error) {
 	return FreeSpace(path).Do(ctx, cl)
 }
 
