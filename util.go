@@ -170,7 +170,8 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 	}
 
 	// build headers and field names
-	headers, fieldnames := make([]string, len(cols)), make([]string, len(cols))
+	var hasTotals bool
+	headers, fieldnames, totals := make([]string, len(cols)), make([]string, len(cols)), make([]transrpc.ByteCount, len(cols))
 	for i, c := range cols {
 		if c == "shorthash" {
 			headers[i], fieldnames[i] = "HASH", "hashString"
@@ -229,6 +230,9 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 				continue
 			}
 
+			hasTotals = true
+			totals[i] += x
+
 			suffix, prec := "", 2
 			if headers[i] == "UP" || headers[i] == "DOWN" {
 				suffix = "/s"
@@ -240,6 +244,27 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 				row[i] = x.Format(!args.SI, prec, suffix)
 			} else {
 				row[i] = fmt.Sprintf("%d%s", x, suffix)
+			}
+		}
+		tbl.Append(row)
+	}
+
+	if hasTotals && len(torrents) > 0 {
+		row := make([]string, len(cols))
+		for i := 0; i < len(totals); i++ {
+			if x := totals[i]; x != 0 {
+				suffix, prec := "", 2
+				if headers[i] == "UP" || headers[i] == "DOWN" {
+					suffix = "/s"
+				}
+				if args.Human == "true" || args.Human == "1" || args.SI {
+					if args.SI && int64(x) < 1024*1024 || !args.SI && int64(x) < 1000*1000 {
+						prec = 0
+					}
+					row[i] = x.Format(!args.SI, prec, suffix)
+				} else {
+					row[i] = fmt.Sprintf("%d%s", x, suffix)
+				}
 			}
 		}
 		tbl.Append(row)
