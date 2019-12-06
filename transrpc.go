@@ -190,18 +190,18 @@ type ByteCount int64
 
 // String satisfies the fmt.Stringer interface.
 func (bc ByteCount) String() string {
-	return bc.Format(false)
+	return bc.Format(true, 2, "")
 }
 
 // Format formats the byte count.
-func (bc ByteCount) Format(asIEC bool) string {
-	c, suffixes, end := int64(1000), "kMGTPEZY", "B"
+func (bc ByteCount) Format(asIEC bool, prec int, suffix string) string {
+	c, sizes, end := int64(1000), "kMGTPEZY", "B"
 	if asIEC {
-		c, end, suffixes = 1024, "iB", "KMGTPEZY"
+		c, end, sizes = 1024, "iB", "KMGTPEZY"
 	}
 
 	if int64(bc) < c {
-		return fmt.Sprintf("%d B", bc)
+		return fmt.Sprintf("%d B%s", bc, suffix)
 	}
 
 	exp, div := 0, c
@@ -209,7 +209,7 @@ func (bc ByteCount) Format(asIEC bool) string {
 		div *= c
 		exp++
 	}
-	return fmt.Sprintf("%.2f %c%s", float64(bc)/float64(div), suffixes[exp], end)
+	return fmt.Sprintf("%."+fmt.Sprintf("%d", prec)+"f %c%s%s", float64(bc)/float64(div), sizes[exp], end, suffix)
 }
 
 // Percent wraps a float64.
