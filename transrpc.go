@@ -3,6 +3,9 @@
 // See: https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
 package transrpc
 
+//go:generate stringer -type Status -trimprefix Status
+//go:generate stringer -type Priority -trimprefix Priority
+
 import (
 	"context"
 	"fmt"
@@ -21,19 +24,6 @@ const (
 	PriorityHigh   Priority = 1
 )
 
-// String satisfies the fmt.Stringer interface.
-func (p Priority) String() string {
-	switch p {
-	case PriorityLow:
-		return "Low"
-	case PriorityNormal:
-		return "Normal"
-	case PriorityHigh:
-		return "High"
-	}
-	return fmt.Sprintf("Priority(%d)", p)
-}
-
 // UnmarshalJSON satisfies the json.Unmarshaler interface.
 func (p *Priority) UnmarshalJSON(buf []byte) error {
 	if len(buf) == 0 {
@@ -49,6 +39,37 @@ func (p *Priority) UnmarshalJSON(buf []byte) error {
 		return nil
 	}
 	return ErrInvalidPriority
+}
+
+// Status are torrent statuses.
+type Status int64
+
+// Statuses.
+const (
+	StatusStopped Status = iota
+	StatusCheckWait
+	StatusCheck
+	StatusDownloadWait
+	StatusDownload
+	StatusSeedWait
+	StatusSeed
+)
+
+// UnmarshalJSON satisfies the json.Unmarshaler interface.
+func (s *Status) UnmarshalJSON(buf []byte) error {
+	if len(buf) == 0 {
+		return ErrInvalidPriority
+	}
+	i, err := strconv.ParseInt(string(buf), 10, 64)
+	if err != nil {
+		return err
+	}
+	switch x := Status(i); x {
+	case StatusStopped, StatusCheckWait, StatusCheck, StatusDownloadWait, StatusDownload, StatusSeedWait, StatusSeed:
+		*s = x
+		return nil
+	}
+	return ErrInvalidStatus
 }
 
 // Time wraps time.Time.
@@ -68,6 +89,35 @@ func (t *Time) UnmarshalJSON(buf []byte) error {
 	}
 	*t = Time(time.Unix(i, 0))
 	return nil
+}
+
+// Duration wraps time.Duration.
+type Duration time.Duration
+
+// String satisfies the fmt.Stringer interface.
+func (d Duration) String() string {
+	return fmt.Sprintf("%v", time.Duration(d))
+}
+
+// UnmarshalJSON satisfies the json.Unmarshaler interface.
+func (d *Duration) UnmarshalJSON(buf []byte) error {
+	if len(buf) == 0 {
+		return ErrInvalidDuration
+	}
+	i, err := strconv.ParseInt(string(buf), 10, 64)
+	if err != nil {
+		return err
+	}
+	if i == 0 {
+		return nil
+	}
+	*d = Duration(i * int64(time.Second))
+	return nil
+}
+
+// MarshalJSON satisfies the json.Marshaler interface.
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatInt(int64(time.Duration(d)/time.Second), 10)), nil
 }
 
 // Bool wraps int64.
@@ -102,23 +152,23 @@ func (b *Bool) UnmarshalJSON(buf []byte) error {
 
 // Torrent holds information about a torrent.
 type Torrent struct {
-	ActivityDate      Time   `json:"activityDate,omitempty"`      // tr_stat
-	AddedDate         Time   `json:"addedDate,omitempty"`         // tr_stat
-	BandwidthPriority int64  `json:"bandwidthPriority,omitempty"` // tr_priority_t
-	Comment           string `json:"comment,omitempty"`           // tr_info
-	CorruptEver       int64  `json:"corruptEver,omitempty"`       // tr_stat
-	Creator           string `json:"creator,omitempty"`           // tr_info
-	DateCreated       Time   `json:"dateCreated,omitempty"`       // tr_info
-	DesiredAvailable  int64  `json:"desiredAvailable,omitempty"`  // tr_stat
-	DoneDate          Time   `json:"doneDate,omitempty"`          // tr_stat
-	DownloadDir       string `json:"downloadDir,omitempty"`       // tr_torrent
-	DownloadedEver    int64  `json:"downloadedEver,omitempty"`    // tr_stat
-	DownloadLimit     int64  `json:"downloadLimit,omitempty"`     // tr_torrent
-	DownloadLimited   bool   `json:"downloadLimited,omitempty"`   // tr_torrent
-	Error             int64  `json:"error,omitempty"`             // tr_stat
-	ErrorString       string `json:"errorString,omitempty"`       // tr_stat
-	Eta               int64  `json:"eta,omitempty"`               // tr_stat
-	EtaIdle           int64  `json:"etaIdle,omitempty"`           // tr_stat
+	ActivityDate      Time     `json:"activityDate,omitempty"`      // tr_stat
+	AddedDate         Time     `json:"addedDate,omitempty"`         // tr_stat
+	BandwidthPriority int64    `json:"bandwidthPriority,omitempty"` // tr_priority_t
+	Comment           string   `json:"comment,omitempty"`           // tr_info
+	CorruptEver       int64    `json:"corruptEver,omitempty"`       // tr_stat
+	Creator           string   `json:"creator,omitempty"`           // tr_info
+	DateCreated       Time     `json:"dateCreated,omitempty"`       // tr_info
+	DesiredAvailable  int64    `json:"desiredAvailable,omitempty"`  // tr_stat
+	DoneDate          Time     `json:"doneDate,omitempty"`          // tr_stat
+	DownloadDir       string   `json:"downloadDir,omitempty"`       // tr_torrent
+	DownloadedEver    int64    `json:"downloadedEver,omitempty"`    // tr_stat
+	DownloadLimit     int64    `json:"downloadLimit,omitempty"`     // tr_torrent
+	DownloadLimited   bool     `json:"downloadLimited,omitempty"`   // tr_torrent
+	Error             int64    `json:"error,omitempty"`             // tr_stat
+	ErrorString       string   `json:"errorString,omitempty"`       // tr_stat
+	Eta               Duration `json:"eta,omitempty"`               // tr_stat
+	EtaIdle           Duration `json:"etaIdle,omitempty"`           // tr_stat
 	Files             []struct {
 		BytesCompleted int64  `json:"bytesCompleted,omitempty"` // tr_torrent
 		Length         int64  `json:"length,omitempty"`         // tr_info
@@ -184,15 +234,15 @@ type Torrent struct {
 	RateDownload       int64      `json:"rateDownload,omitempty"`       // tr_stat
 	RateUpload         int64      `json:"rateUpload,omitempty"`         // tr_stat
 	RecheckProgress    float64    `json:"recheckProgress,omitempty"`    // tr_stat
-	SecondsDownloading int64      `json:"secondsDownloading,omitempty"` // tr_stat
-	SecondsSeeding     int64      `json:"secondsSeeding,omitempty"`     // tr_stat
+	SecondsDownloading Duration   `json:"secondsDownloading,omitempty"` // tr_stat
+	SecondsSeeding     Duration   `json:"secondsSeeding,omitempty"`     // tr_stat
 	SeedIdleLimit      int64      `json:"seedIdleLimit,omitempty"`      // tr_torrent
 	SeedIdleMode       int64      `json:"seedIdleMode,omitempty"`       // tr_inactvelimit
 	SeedRatioLimit     float64    `json:"seedRatioLimit,omitempty"`     // tr_torrent
 	SeedRatioMode      int64      `json:"seedRatioMode,omitempty"`      // tr_ratiolimit
 	SizeWhenDone       int64      `json:"sizeWhenDone,omitempty"`       // tr_stat
 	StartDate          Time       `json:"startDate,omitempty"`          // tr_stat
-	Status             int64      `json:"status,omitempty"`             // tr_stat
+	Status             Status     `json:"status,omitempty"`             // tr_stat
 	Trackers           []struct {
 		Announce string `json:"announce,omitempty"` // tr_tracker_info
 		ID       int64  `json:"id,omitempty"`       // tr_tracker_info
@@ -1457,18 +1507,18 @@ type SessionStatsResponse struct {
 	TorrentCount       int64 `json:"torrentCount,omitempty"`
 	UploadSpeed        int64 `json:"uploadSpeed,omitempty"`
 	CumulativeStats    struct {
-		UploadedBytes   int64 `json:"uploadedBytes,omitempty"`   // tr_session_stats
-		DownloadedBytes int64 `json:"downloadedBytes,omitempty"` // tr_session_stats
-		FilesAdded      int64 `json:"filesAdded,omitempty"`      // tr_session_stats
-		SessionCount    int64 `json:"sessionCount,omitempty"`    // tr_session_stats
-		SecondsActive   int64 `json:"secondsActive,omitempty"`   // tr_session_stats
+		UploadedBytes   int64    `json:"uploadedBytes,omitempty"`   // tr_session_stats
+		DownloadedBytes int64    `json:"downloadedBytes,omitempty"` // tr_session_stats
+		FilesAdded      int64    `json:"filesAdded,omitempty"`      // tr_session_stats
+		SessionCount    int64    `json:"sessionCount,omitempty"`    // tr_session_stats
+		SecondsActive   Duration `json:"secondsActive,omitempty"`   // tr_session_stats
 	} `json:"cumulative-stats,omitempty"`
 	CurrentStats struct {
-		UploadedBytes   int64 `json:"uploadedBytes,omitempty"`   // tr_session_stats
-		DownloadedBytes int64 `json:"downloadedBytes,omitempty"` // tr_session_stats
-		FilesAdded      int64 `json:"filesAdded,omitempty"`      // tr_session_stats
-		SessionCount    int64 `json:"sessionCount,omitempty"`    // tr_session_stats
-		SecondsActive   int64 `json:"secondsActive,omitempty"`   // tr_session_stats
+		UploadedBytes   int64    `json:"uploadedBytes,omitempty"`   // tr_session_stats
+		DownloadedBytes int64    `json:"downloadedBytes,omitempty"` // tr_session_stats
+		FilesAdded      int64    `json:"filesAdded,omitempty"`      // tr_session_stats
+		SessionCount    int64    `json:"sessionCount,omitempty"`    // tr_session_stats
+		SecondsActive   Duration `json:"secondsActive,omitempty"`   // tr_session_stats
 	} `json:"current-stats,omitempty"`
 }
 

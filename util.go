@@ -37,8 +37,14 @@ const (
 	// ErrInvalidPriority is the invalid priority error.
 	ErrInvalidPriority Error = "invalid priority"
 
+	// ErrInvalidStatus is the invalid status error.
+	ErrInvalidStatus Error = "invalid status"
+
 	// ErrInvalidTime is the invalid time error.
 	ErrInvalidTime Error = "invalid time"
+
+	// ErrInvalidDuration is the invalid duration error.
+	ErrInvalidDuration Error = "invalid duration"
 
 	// ErrInvalidBool is the invalid bool error.
 	ErrInvalidBool Error = "invalid bool"
