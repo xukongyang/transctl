@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -148,13 +147,49 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 	return f(w, args, cl)
 }
 
-// encodeTable encodes the torrent results to the writer as a table.
-func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Client) error {
-	// return tblfmt.EncodeTable(w, tr)
+// encodeTableColumns encodes the specified table results with the included
+// columns.
+func (tr *TorrentResult) encodeTableColumns(w io.Writer, cl *transrpc.Client, cols ...string) error {
+	// check field names
+	typ := reflect.TypeOf(transrpc.Torrent{})
+	fields := make(map[string]int, typ.NumField())
+	for i := 0; i < typ.NumField(); i++ {
+		tag := typ.Field(i).Tag.Get("json")
+		if tag == "" || tag == "-" {
+			continue
+		}
+		fields[strings.SplitN(tag, ",", 2)[0]] = i
+	}
+
+	// build headers and field names
+	headers, fieldnames := make([]string, len(cols)), make([]string, len(cols))
+	for i, c := range cols {
+		if c == "shorthash" {
+			headers[i], fieldnames[i] = "HASH", "hashString"
+			continue
+		}
+		n, ok := fields[c]
+		if !ok {
+			return fmt.Errorf("invalid torrent field %q", c)
+		}
+		headers[i] = strings.ReplaceAll(strings.ToUpper(snaker.CamelToSnakeIdentifier(typ.Field(n).Name)), "_", " ")
+		fieldnames[i] = c
+	}
+
+	// build base request
+	ids := make([]interface{}, len(tr.torrents))
+	for i := 0; i < len(tr.torrents); i++ {
+		ids[i] = tr.torrents[i].HashString
+	}
+	req := transrpc.TorrentGet(ids...).WithFields(fieldnames...)
+	res, err := req.Do(context.Background(), cl)
+	if err != nil {
+		return err
+	}
 
 	// tablewriter package is temporary until tblfmt is fixed
 	tbl := tablewriter.NewWriter(w)
-	tbl.SetHeader([]string{"ID", "NAME", "HASH"})
+	tbl.SetHeader(headers)
 	tbl.SetAutoWrapText(false)
 	tbl.SetAutoFormatHeaders(true)
 	tbl.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -166,20 +201,33 @@ func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Clien
 	tbl.SetBorder(false)
 	tbl.SetTablePadding("\t") // pad with tabs
 	tbl.SetNoWhiteSpace(true)
-	for _, t := range tr.torrents {
-		tbl.Append([]string{
-			strconv.FormatInt(t.ID, 10),
-			t.Name,
-			t.HashString[:defaultShortHashLen],
-		})
+
+	// add torrents
+	for _, t := range res.Torrents {
+		row := make([]string, len(cols))
+		for i := 0; i < len(cols); i++ {
+			if cols[i] == "shorthash" {
+				row[i] = t.HashString[:defaultShortHashLen]
+			} else {
+				row[i] = fmt.Sprintf("%v", reflect.ValueOf(t).Field(fields[cols[i]]))
+			}
+		}
+		tbl.Append(row)
 	}
+
 	tbl.Render()
 	return nil
 }
 
+// encodeTable encodes the torrent results to the writer as a table.
+func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Client) error {
+	return tr.encodeTableColumns(w, cl, "id", "name", "uploadRatio", "eta", "status", "shorthash")
+}
+
 // encodeWide encodes the torrent results to the writer as a table.
 func (tr *TorrentResult) encodeWide(w io.Writer, args *Args, cl *transrpc.Client) error {
-	return errors.New("not implemented")
+	//  Have  ETA           Up    Down  Ratio  Status
+	return tr.encodeTableColumns(w, cl, "id", "name", "shorthash")
 }
 
 // encodeJSON encodes the torrent results to the writer as a table.
