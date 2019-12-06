@@ -190,24 +190,21 @@ type ByteCount int64
 
 // String satisfies the fmt.Stringer interface.
 func (bc ByteCount) String() string {
-	return bc.FormatSI()
+	return bc.Format(false)
 }
 
-// FormatSI formats the byte count in SI format.
-func (bc ByteCount) FormatSI() string {
-	return bc.format(1000, "B", "kMGTPE")
-}
+// Format formats the byte count.
+func (bc ByteCount) Format(asIEC bool) string {
+	c, suffixes, end := int64(1000), "kMGTPEZY", "B"
+	if asIEC {
+		c, end = 1024, "iB"
+		suffixes = "KMGTPEZY"
+	}
 
-// FormatIEC formats the byte count in IEC format.
-func (bc ByteCount) FormatIEC() string {
-	return bc.format(1024, "iB", "KMGTPE")
-}
-
-// format formats the byte count.
-func (bc ByteCount) format(c int64, end string, suffixes string) string {
 	if int64(bc) < c {
 		return fmt.Sprintf("%d B", bc)
 	}
+
 	exp, div := 0, c
 	for n := int64(bc) / c; n >= c; n /= c {
 		div *= c
