@@ -189,14 +189,18 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 	}
 
 	// build base request
-	ids := make([]interface{}, len(tr.torrents))
-	for i := 0; i < len(tr.torrents); i++ {
-		ids[i] = tr.torrents[i].HashString
-	}
-	req := transrpc.TorrentGet(ids...).WithFields(fieldnames...)
-	res, err := req.Do(context.Background(), cl)
-	if err != nil {
-		return err
+	var torrents []transrpc.Torrent
+	if len(tr.torrents) != 0 {
+		ids := make([]interface{}, len(tr.torrents))
+		for i := 0; i < len(tr.torrents); i++ {
+			ids[i] = tr.torrents[i].HashString
+		}
+		req := transrpc.TorrentGet(ids...).WithFields(fieldnames...)
+		res, err := req.Do(context.Background(), cl)
+		if err != nil {
+			return err
+		}
+		torrents = res.Torrents
 	}
 
 	// tablewriter package is temporary until tblfmt is fixed
@@ -215,7 +219,7 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 	tbl.SetNoWhiteSpace(true)
 
 	// add torrents
-	for _, t := range res.Torrents {
+	for _, t := range torrents {
 		row := make([]string, len(cols))
 		for i := 0; i < len(cols); i++ {
 			if cols[i] == "shorthash" {
@@ -230,7 +234,7 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 					if args.Human != "true" && args.Human != "1" && !args.HumanSI {
 						v = fmt.Sprintf("%d%s", x, suffix)
 					} else {
-						v = x.Format(args.HumanSI, prec, suffix)
+						v = x.Format(!args.HumanSI, prec, suffix)
 					}
 				}
 				row[i] = fmt.Sprintf("%v", v)

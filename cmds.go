@@ -150,6 +150,9 @@ func doReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
 		if err != nil {
 			return err
 		}
+		if len(torrents) == 0 {
+			return nil
+		}
 		return f(convTorrentIDs(torrents)...).Do(context.Background(), cl)
 	}
 }
@@ -159,6 +162,9 @@ func doMove(args *Args) error {
 	cl, torrents, err := args.findTorrents()
 	if err != nil {
 		return err
+	}
+	if len(torrents) == 0 {
+		return nil
 	}
 	return transrpc.TorrentSetLocation(
 		args.MoveParams.Dest, true, convTorrentIDs(torrents)...,
@@ -170,6 +176,9 @@ func doRemove(args *Args) error {
 	cl, torrents, err := args.findTorrents()
 	if err != nil {
 		return err
+	}
+	if len(torrents) == 0 {
+		return nil
 	}
 	return transrpc.TorrentRemove(
 		args.RemoveParams.Remove, convTorrentIDs(torrents)...,
@@ -233,7 +242,11 @@ func doFreeSpace(args *Args) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stdout, path, size)
+		sz := fmt.Sprintf("%d", size)
+		if args.Human == "true" || args.Human != "1" || args.HumanSI {
+			sz = size.Format(!args.HumanSI, 2, "")
+		}
+		fmt.Fprintln(os.Stdout, path, sz)
 	}
 	return nil
 }
