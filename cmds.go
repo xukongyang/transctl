@@ -243,7 +243,7 @@ func doFreeSpace(args *Args) error {
 			return err
 		}
 		sz := fmt.Sprintf("%d", size)
-		if args.Human == "true" || args.Human != "1" || args.HumanSI {
+		if args.Human == "true" || args.Human == "1" || args.HumanSI {
 			sz = size.Format(!args.HumanSI, 2, "")
 		}
 		fmt.Fprintln(os.Stdout, path, sz)
