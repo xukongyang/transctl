@@ -61,10 +61,10 @@ type Args struct {
 	// Timeout is the rpc host request timeout.
 	Timeout time.Duration
 
-	// Human is the toggle to display sizes in powers of 1024 (ie, 1023M).
+	// Human is the toggle to display sizes in powers of 1024 (ie, 1023MiB).
 	Human string
 
-	// SI is the toggle to display sizes in powers of 1000 (ie, 1.1G).
+	// SI is the toggle to display sizes in powers of 1000 (ie, 1.1GB).
 	SI bool
 
 	// SIWasSet is the si was set toggle.
@@ -212,10 +212,10 @@ func NewArgs() (*Args, error) {
 
 		// add command
 		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
-		cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml")
+		cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml", "flat")
 		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.ListAll)
-		cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023M) (default: true)").Default("true").StringVar(&args.Human)
-		cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").IsSetByUser(&args.SIWasSet).BoolVar(&args.SI)
+		cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
+		cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.SIWasSet).BoolVar(&args.SI)
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Recent)
@@ -234,16 +234,15 @@ func NewArgs() (*Args, error) {
 	}
 
 	// stats command
-	sessionStatsCmd := kingpin.Command("stats", "Get session statistics")
-	sessionStatsCmd.Flag("output", "output format (default: table)").Short('o').Default("table").PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml")
+	_ = kingpin.Command("stats", "Get session statistics")
 
 	// shutdown command
 	_ = kingpin.Command("shutdown", "Shutdown remote host")
 
 	// free-space command
 	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
-	freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023M) (default: true)").Default("true").StringVar(&args.Human)
-	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").BoolVar(&args.SI)
+	freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
+	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").BoolVar(&args.SI)
 	freeSpaceCmd.Arg("location", "location").Required().StringsVar(&args.Args)
 
 	// blocklist-update command

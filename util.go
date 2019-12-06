@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -138,6 +139,8 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 		f = tr.encodeJSON
 	case "yaml":
 		f = tr.encodeYaml
+	case "flat":
+		f = tr.encodeFlat
 	default:
 		return ErrInvalidOutputOptionSpecified
 	}
@@ -187,11 +190,7 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 	// build base request
 	var torrents []transrpc.Torrent
 	if len(tr.torrents) != 0 {
-		ids := make([]interface{}, len(tr.torrents))
-		for i := 0; i < len(tr.torrents); i++ {
-			ids[i] = tr.torrents[i].HashString
-		}
-		req := transrpc.TorrentGet(ids...).WithFields(fieldnames...)
+		req := transrpc.TorrentGet(convTorrentIDs(tr.torrents)...).WithFields(fieldnames...)
 		res, err := req.Do(context.Background(), cl)
 		if err != nil {
 			return err
@@ -262,11 +261,7 @@ func (tr *TorrentResult) encodeWide(w io.Writer, args *Args, cl *transrpc.Client
 
 // encodeJSON encodes the torrent results to the writer as a table.
 func (tr *TorrentResult) encodeJSON(w io.Writer, args *Args, cl *transrpc.Client) error {
-	ids := make([]interface{}, len(tr.torrents))
-	for i := 0; i < len(tr.torrents); i++ {
-		ids[i] = tr.torrents[i].HashString
-	}
-	res, err := cl.TorrentGet(context.Background(), ids...)
+	res, err := cl.TorrentGet(context.Background(), convTorrentIDs(tr.torrents)...)
 	if err != nil {
 		return err
 	}
@@ -277,11 +272,7 @@ func (tr *TorrentResult) encodeJSON(w io.Writer, args *Args, cl *transrpc.Client
 
 // encodeYaml encodes the torrent results to the writer as a table.
 func (tr *TorrentResult) encodeYaml(w io.Writer, args *Args, cl *transrpc.Client) error {
-	ids := make([]interface{}, len(tr.torrents))
-	for i := 0; i < len(tr.torrents); i++ {
-		ids[i] = tr.torrents[i].HashString
-	}
-	res, err := cl.TorrentGet(context.Background(), ids...)
+	res, err := cl.TorrentGet(context.Background(), convTorrentIDs(tr.torrents)...)
 	if err != nil {
 		return err
 	}
@@ -289,6 +280,34 @@ func (tr *TorrentResult) encodeYaml(w io.Writer, args *Args, cl *transrpc.Client
 		fmt.Fprintln(w, "---")
 		if err = yaml.NewEncoder(w).Encode(t); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// encodeFlat encodes the torrent results to the writer as a flat key map.
+func (tr *TorrentResult) encodeFlat(w io.Writer, args *Args, cl *transrpc.Client) error {
+	res, err := cl.TorrentGet(context.Background(), convTorrentIDs(tr.torrents)...)
+	if err != nil {
+		return err
+	}
+	for i, t := range res.Torrents {
+		if i != 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintf(w, "[torrent %s]\n", t.HashString[:defaultShortHashLen])
+		m := make(map[string]string)
+		addFieldsToMap(m, "", reflect.ValueOf(t))
+		var keys []string
+		for k := range m {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if m[k] == "" {
+				continue
+			}
+			fmt.Fprintf(w, "%s=%s\n", k, m[k])
 		}
 	}
 	return nil
@@ -394,9 +413,49 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 		case reflect.Struct:
 			addFieldsToMap(m, name+".", f)
 		case reflect.Slice:
-			s, ok := f.Interface().([]string)
-			if !ok {
-				panic("not a []string")
+			var s []string
+			switch x := f.Interface().(type) {
+			case []string:
+				s = x
+			case []byte:
+				s = append(s, base64.StdEncoding.EncodeToString(x))
+			case []int64:
+				for _, v := range x {
+					s = append(s, strconv.FormatInt(v, 10))
+				}
+			case []transrpc.Priority:
+				for _, v := range x {
+					s = append(s, fmt.Sprintf("%d", v))
+				}
+			case []transrpc.Bool:
+				for _, v := range x {
+					if bool(v) {
+						s = append(s, "1")
+					} else {
+						s = append(s, "0")
+					}
+				}
+			default:
+				if reflect.TypeOf(x).Elem().Kind() != reflect.Struct {
+					panic(fmt.Sprintf("unknown type for field %q", prefix+name))
+				}
+				for i := 0; i < f.Len(); i++ {
+					z := make(map[string]string)
+					addFieldsToMap(z, "", f.Index(i))
+					var keys []string
+					for k := range z {
+						keys = append(keys, k)
+					}
+					sort.Strings(keys)
+					var a string
+					for i, k := range keys {
+						if i != 0 {
+							a += ","
+						}
+						a += fmt.Sprintf("%s:%s", strings.TrimSpace(k), strings.TrimSpace(z[k]))
+					}
+					s = append(s, "{"+a+"}")
+				}
 			}
 			m[prefix+name] = strings.Join(s, ",")
 
