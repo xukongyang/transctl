@@ -8,9 +8,10 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d
-	github.com/kenshaw/transrpc v0.0.0-20191206044819-98aebc55ec4e
+	github.com/kenshaw/transrpc v0.0.0-20191206045616-05f8e1c2cf97
 	github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0
 	github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687
 	github.com/olekukonko/tablewriter v0.0.4
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.2.7 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
 )

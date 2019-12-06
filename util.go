@@ -14,7 +14,7 @@ import (
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/snaker"
 	"github.com/olekukonko/tablewriter"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
