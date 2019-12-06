@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/kenshaw/transrpc"
@@ -32,6 +33,20 @@ func run() error {
 	// load config
 	if err = args.loadConfig(); err != nil {
 		return err
+	}
+
+	// change flags from config file, if not set
+	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.output"))); v != "" && !args.OutputWasSet {
+		args.Output = v
+	}
+	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.si"))); v != "" && !args.SIWasSet {
+		args.SI = v == "true" || v == "1"
+	}
+	if v := args.getContextKey("match-order"); v != "" && !args.MatchOrderWasSet {
+		args.MatchOrder = strings.Split(v, ",")
+		for i := 0; i < len(args.MatchOrder); i++ {
+			args.MatchOrder[i] = strings.ToLower(strings.TrimSpace(args.MatchOrder[i]))
+		}
 	}
 
 	switch cmd {

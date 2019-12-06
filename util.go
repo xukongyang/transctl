@@ -128,12 +128,8 @@ func (*TorrentResult) NextResultSet() bool {
 // Encode encodes the torrent result using the settings in args to the
 // io.Writer.
 func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) error {
-	output := args.Output
-	if o := args.Config.GetKey("default.output"); o != "" && !args.OutputWasSet {
-		output = o
-	}
 	var f func(io.Writer, *Args, *transrpc.Client) error
-	switch output {
+	switch args.Output {
 	case "table":
 		f = tr.encodeTable
 	case "wide":
@@ -238,11 +234,11 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 			if headers[i] == "UP" || headers[i] == "DOWN" {
 				suffix = "/s"
 			}
-			if args.Human == "true" || args.Human == "1" || args.HumanSI {
-				if args.HumanSI && int64(x) < 1024*1024 || !args.HumanSI && int64(x) < 1000*1000 {
+			if args.Human == "true" || args.Human == "1" || args.SI {
+				if args.SI && int64(x) < 1024*1024 || !args.SI && int64(x) < 1000*1000 {
 					prec = 0
 				}
-				row[i] = x.Format(!args.HumanSI, prec, suffix)
+				row[i] = x.Format(!args.SI, prec, suffix)
 			} else {
 				row[i] = fmt.Sprintf("%d%s", x, suffix)
 			}

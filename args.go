@@ -61,11 +61,14 @@ type Args struct {
 	// Timeout is the rpc host request timeout.
 	Timeout time.Duration
 
-	// Human is the toggle to display sizes in powers of 1024 (ie, 1023M)
+	// Human is the toggle to display sizes in powers of 1024 (ie, 1023M).
 	Human string
 
-	// HumanSI is the toggle to display sizes in powers of 1000 (ie, 1.1G)
-	HumanSI bool
+	// SI is the toggle to display sizes in powers of 1000 (ie, 1.1G).
+	SI bool
+
+	// SIWasSet is the si was set toggle.
+	SIWasSet bool
 
 	// ConfigParams are the config params.
 	ConfigParams struct {
@@ -212,7 +215,7 @@ func NewArgs() (*Args, error) {
 		cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml")
 		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.ListAll)
 		cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023M) (default: true)").Default("true").StringVar(&args.Human)
-		cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").BoolVar(&args.HumanSI)
+		cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").IsSetByUser(&args.SIWasSet).BoolVar(&args.SI)
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Recent)
@@ -240,7 +243,7 @@ func NewArgs() (*Args, error) {
 	// free-space command
 	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
 	freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023M) (default: true)").Default("true").StringVar(&args.Human)
-	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").BoolVar(&args.HumanSI)
+	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1G)").BoolVar(&args.SI)
 	freeSpaceCmd.Arg("location", "location").Required().StringsVar(&args.Args)
 
 	// blocklist-update command
@@ -430,15 +433,6 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 		return nil, nil, err
 	}
 
-	// grab context match order if specified
-	matchOrder := args.MatchOrder
-	if v := args.getContextKey("match-order"); v != "" && !args.MatchOrderWasSet {
-		matchOrder = strings.Split(v, ",")
-		for i := 0; i < len(matchOrder); i++ {
-			matchOrder[i] = strings.ToLower(strings.TrimSpace(matchOrder[i]))
-		}
-	}
-
 	// filter torrents
 	var torrents []transrpc.Torrent
 	if args.ListAll || args.Recent {
@@ -449,7 +443,7 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 				g, err := glob.Compile(id)
 				if err != nil {
 				}
-				for _, m := range matchOrder {
+				for _, m := range args.MatchOrder {
 					switch m {
 					case "id":
 						if id == strconv.FormatInt(t.ID, 10) {
