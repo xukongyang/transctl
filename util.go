@@ -99,20 +99,18 @@ func (tr *TorrentResult) Next() bool {
 // Scan satisfies the tblfmt.ResultSet interface.
 func (tr *TorrentResult) Scan(v ...interface{}) error {
 	// TODO: fix this and use tblfmt again
+	/*
 	*(v[0].(*interface{})) = tr.torrents[tr.index].ID
 	*(v[1].(*interface{})) = tr.torrents[tr.index].Name
 	*(v[2].(*interface{})) = tr.torrents[tr.index].HashString[:defaultShortHashLen]
+	 */
 	tr.index++
 	return nil
 }
 
 // Columns satisfies the tblfmt.ResultSet interface.
 func (*TorrentResult) Columns() ([]string, error) {
-	return []string{
-		"ID",
-		"Name",
-		"Short",
-	}, nil
+	return []string{}, nil
 }
 
 // Close satisfies the tblfmt.ResultSet interface.
@@ -134,7 +132,7 @@ func (*TorrentResult) NextResultSet() bool {
 // io.Writer.
 func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) error {
 	var f func(io.Writer, *Args, *transrpc.Client) error
-	switch args.Output {
+	switch args.Output.Output {
 	case "table":
 		f = tr.encodeTable
 	case "wide":
@@ -205,7 +203,9 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 
 	// tablewriter package is temporary until tblfmt is fixed
 	tbl := tablewriter.NewWriter(w)
-	tbl.SetHeader(headers)
+	if !args.Output.NoHeaders {
+		tbl.SetHeader(headers)
+	}
 	tbl.SetAutoWrapText(false)
 	tbl.SetAutoFormatHeaders(true)
 	tbl.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -241,11 +241,11 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 			if headers[i] == "UP" || headers[i] == "DOWN" {
 				suffix = "/s"
 			}
-			if args.Human == "true" || args.Human == "1" || args.SI {
-				if args.SI && int64(x) < 1024*1024 || !args.SI && int64(x) < 1000*1000 {
+			if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+				if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
 					prec = 0
 				}
-				row[i] = x.Format(!args.SI, prec, suffix)
+				row[i] = x.Format(!args.Output.SI, prec, suffix)
 			} else {
 				row[i] = fmt.Sprintf("%d%s", x, suffix)
 			}
@@ -253,7 +253,7 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 		tbl.Append(row)
 	}
 
-	if hasTotals && len(torrents) > 0 {
+	if !args.Output.NoTotals && hasTotals && len(torrents) > 0 {
 		row := make([]string, len(cols))
 		for i := 0; i < len(totals); i++ {
 			if x := totals[i]; x != 0 {
@@ -261,11 +261,11 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 				if headers[i] == "UP" || headers[i] == "DOWN" {
 					suffix = "/s"
 				}
-				if args.Human == "true" || args.Human == "1" || args.SI {
-					if args.SI && int64(x) < 1024*1024 || !args.SI && int64(x) < 1000*1000 {
+				if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+					if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
 						prec = 0
 					}
-					row[i] = x.Format(!args.SI, prec, suffix)
+					row[i] = x.Format(!args.Output.SI, prec, suffix)
 				} else {
 					row[i] = fmt.Sprintf("%d%s", x, suffix)
 				}

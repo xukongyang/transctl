@@ -16,7 +16,7 @@ import (
 // doConfig is the high-level entry point for 'config'.
 func doConfig(args *Args) error {
 	switch {
-	case args.ListAll && args.ConfigParams.Unset:
+	case args.Filter.ListAll && args.ConfigParams.Unset:
 		return ErrCannotListAllOptionsAndUnset
 	case args.ConfigParams.Remote && args.ConfigParams.Unset:
 		return ErrCannotUnsetARemoteConfigOption
@@ -243,8 +243,8 @@ func doFreeSpace(args *Args) error {
 			return err
 		}
 		sz := fmt.Sprintf("%d", size)
-		if args.Human == "true" || args.Human == "1" || args.SI {
-			sz = size.Format(!args.SI, 2, "")
+		if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+			sz = size.Format(!args.Output.SI, 2, "")
 		}
 		fmt.Fprintln(os.Stdout, path, sz)
 	}

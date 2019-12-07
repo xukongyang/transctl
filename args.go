@@ -22,53 +22,89 @@ import (
 
 // Args holds command args.
 type Args struct {
-	// Verbose is the global verbose toggle.
-	Verbose bool
-
 	// ConfigFile is the global config file.
 	ConfigFile string
-
-	// URL is the global URL to work with.
-	URL *url.URL
-
-	// Proto is the global proto to use for building URLs.
-	Proto string
-
-	// Host is the global host and port to use for building URLs.
-	Host string
-
-	// RpcPath is the global rpc path to use for building URLs.
-	RpcPath string
-
-	// Credentials is the global user:pass credentials to work with.
-	Credentials string
-
-	// CredentialsWasSet is the credentials was set toggle.
-	CredentialsWasSet bool
-
-	// NetRC toggles enabling .netrc loading.
-	Netrc bool
-
-	// NetRCFile is the NetRCFile to use.
-	NetrcFile string
 
 	// Context is the global context name.
 	Context string
 
-	// Config is the loaded settings from the config file.
-	Config *ini.File
+	// Verbose is the global verbose toggle.
+	Verbose bool
 
-	// Timeout is the rpc host request timeout.
-	Timeout time.Duration
+	// Host contains the global host configuration.
+	Host struct {
+		// URL is the URL to work with.
+		URL *url.URL
 
-	// Human is the toggle to display sizes in powers of 1024 (ie, 1023MiB).
-	Human string
+		// Proto is the proto to use for building URLs.
+		Proto string
 
-	// SI is the toggle to display sizes in powers of 1000 (ie, 1.1GB).
-	SI bool
+		// Host is the host and port to use for building URLs.
+		Host string
 
-	// SIWasSet is the si was set toggle.
-	SIWasSet bool
+		// RpcPath is the rpc path to use for building URLs.
+		RpcPath string
+
+		// Credentials is the user:pass credentials to work with.
+		Credentials string
+
+		// CredentialsWasSet is the credentials was set toggle.
+		CredentialsWasSet bool
+
+		// Timeout is the rpc host request timeout.
+		Timeout time.Duration
+
+		// NoNetrc toggles disabling .netrc loading.
+		NoNetrc bool
+
+		// NetRCFile is the NetRCFile to use.
+		NetrcFile string
+	}
+
+	// Filter contains the global filter configuration.
+	Filter struct {
+		// MatchOrder is torrent identifier match order.
+		MatchOrder []string
+
+		// MatchOrderWasSet is the match order was set toggle.
+		MatchOrderWasSet bool
+
+		// ListAll is the all toggle.
+		ListAll bool
+
+		// Recent is the recent toggle.
+		Recent bool
+	}
+
+	// Output contains the global output configuration.
+	Output struct {
+		// Human is the toggle to display sizes in powers of 1024 (ie, 1023MiB).
+		Human string
+
+		// SI is the toggle to display sizes in powers of 1000 (ie, 1.1GB).
+		SI bool
+
+		// SIWasSet is the si was set toggle.
+		SIWasSet bool
+
+		// Output is the output format type.
+		Output string
+
+		// OutputWasSet is the output was set toggle.
+		OutputWasSet bool
+
+		// NoHeaders is the toggle to disable headers on table output.
+		NoHeaders bool
+
+		// NoHeadersWasSet is the no headers was set toggle.
+		NoHeadersWasSet bool
+
+		// NoTotals is the toggle to disable the total line on table output.
+		NoTotals bool
+
+		// NoTotalsWasSet is the no totals was set toggle.
+		NoTotalsWasSet bool
+	}
 
 	// ConfigParams are the config params.
 	ConfigParams struct {
@@ -104,26 +140,11 @@ type Args struct {
 		Remove bool
 	}
 
-	// Output is the output format type.
-	Output string
-
-	// OutputWasSet is the output was set toggle.
-	OutputWasSet bool
-
-	// ListAll is the all toggle.
-	ListAll bool
-
-	// Recent is the recent toggle.
-	Recent bool
-
-	// MatchOrder is torrent identifier match order.
-	MatchOrder []string
-
-	// MatchOrderWasSet is the match order was set toggle.
-	MatchOrderWasSet bool
-
-	// Args are torrent identifiers to use.
+	// Args are remaining global arguments.
 	Args []string
+
+	// Config is the loaded settings from the config file.
+	Config *ini.File
 }
 
 // NewArgs creates the command args.
@@ -153,17 +174,17 @@ func NewArgs() (*Args, error) {
 	args.AddParams.Cookies = make(map[string]string)
 
 	// global options
-	kingpin.Flag("verbose", "toggle verbose (default: false)").Short('v').Default("false").BoolVar(&args.Verbose)
+	kingpin.Flag("verbose", "toggle verbose").Short('v').Default("false").BoolVar(&args.Verbose)
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
 	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
-	kingpin.Flag("url", "remote host url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.URL)
-	kingpin.Flag("netrc", "enable netrc loading (default: true)").Short('n').Default("true").BoolVar(&args.Netrc)
-	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.NetrcFile)
-	kingpin.Flag("proto", "protocol to use (default: http)").Default("http").PlaceHolder("<proto>").StringVar(&args.Proto)
-	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.CredentialsWasSet).StringVar(&args.Credentials)
-	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host)
-	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.RpcPath)
-	kingpin.Flag("timeout", "request timeout (default: 25s)").Default("25s").PlaceHolder("<dur>").DurationVar(&args.Timeout)
+	kingpin.Flag("url", "remote host url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.Host.URL)
+	kingpin.Flag("no-netrc", "disable netrc loading").BoolVar(&args.Host.NoNetrc)
+	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.Host.NetrcFile)
+	kingpin.Flag("proto", "protocol to use").Default("http").PlaceHolder("http").StringVar(&args.Host.Proto)
+	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.Host.CredentialsWasSet).StringVar(&args.Host.Credentials)
+	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host.Host)
+	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.Host.RpcPath)
+	kingpin.Flag("timeout", "request timeout (default: 25s)").Default("25s").PlaceHolder("<dur>").DurationVar(&args.Host.Timeout)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set local and remote config")
@@ -171,14 +192,16 @@ func NewArgs() (*Args, error) {
 	configCmd.Arg("name", "option name").StringVar(&args.ConfigParams.Name)
 	configCmd.Arg("value", "option value").StringVar(&args.ConfigParams.Value)
 	configCmd.Flag("unset", "unset value").BoolVar(&args.ConfigParams.Unset)
-	configCmd.Flag("list", "list all options").Short('l').BoolVar(&args.ListAll)
-	configCmd.Flag("all", "list all options").Hidden().BoolVar(&args.ListAll)
+	configCmd.Flag("list", "list all options").Short('l').BoolVar(&args.Filter.ListAll)
+	configCmd.Flag("all", "list all options").Hidden().BoolVar(&args.Filter.ListAll)
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-	addCmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml", "flat")
-	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
-	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.SIWasSet).BoolVar(&args.SI)
+	addCmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
+	addCmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
+	addCmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
+	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
+	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
@@ -216,16 +239,19 @@ func NewArgs() (*Args, error) {
 
 		// add command
 		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
-		cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.OutputWasSet).EnumVar(&args.Output, "table", "wide", "json", "yaml", "flat")
-		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.ListAll)
-		cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
-		cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.SIWasSet).BoolVar(&args.SI)
-		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.ListAll)
-		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Recent)
-		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Recent)
-		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.MatchOrder, "hash", "id", "glob")
+		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.Filter.ListAll)
+		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.Filter.ListAll)
+		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
+		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Filter.Recent)
+		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.Filter.MatchOrder, "hash", "id", "glob")
 
 		switch commands[i] {
+		case "get":
+			cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
+			cmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
+			cmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
+			cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
+			cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 		case "start":
 			cmd.Flag("now", "start now").BoolVar(&args.StartParams.Now)
 		case "move":
@@ -245,8 +271,8 @@ func NewArgs() (*Args, error) {
 
 	// free-space command
 	freeSpaceCmd := kingpin.Command("free-space", "Retrieve free space")
-	freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Human)
-	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").BoolVar(&args.SI)
+	freeSpaceCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").StringVar(&args.Output.Human)
+	freeSpaceCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").BoolVar(&args.Output.SI)
 	freeSpaceCmd.Arg("location", "location").StringsVar(&args.Args)
 
 	// blocklist-update command
@@ -330,11 +356,11 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 	var err error
 
 	// choose specified url first
-	u := args.URL
+	u := args.Host.URL
 
 	// check if host is specified
-	if u == nil && args.Host != "" {
-		u, err = url.Parse(args.Proto + "://" + args.Host + args.RpcPath)
+	if u == nil && args.Host.Host != "" {
+		u, err = url.Parse(args.Host.Proto + "://" + args.Host.Host + args.Host.RpcPath)
 		if err != nil {
 			return nil, ErrInvalidProtoHostOrRpcPath
 		}
@@ -350,19 +376,19 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 
 	// default host
 	if u == nil {
-		host := args.Host
+		host := args.Host.Host
 		if host == "" {
 			host = "localhost:9091"
 		}
-		u, err = url.Parse(args.Proto + "://" + host + args.RpcPath)
+		u, err = url.Parse(args.Host.Proto + "://" + host + args.Host.RpcPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// add credentials
-	if u.User == nil && args.CredentialsWasSet && args.Credentials != "" {
-		creds := strings.SplitN(args.Credentials, ":", 2)
+	if u.User == nil && args.Host.CredentialsWasSet && args.Host.Credentials != "" {
+		creds := strings.SplitN(args.Host.Credentials, ":", 2)
 		if len(creds) == 2 {
 			u.User = url.UserPassword(creds[0], creds[1])
 		} else {
@@ -371,7 +397,7 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 	}
 
 	// get timeout
-	timeout := args.Timeout
+	timeout := args.Host.Timeout
 	if v := args.getContextKey("timeout"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			timeout = d
@@ -387,10 +413,10 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 
 	// load netrc credentials
 	var setFallback bool
-	if args.Netrc && !args.CredentialsWasSet {
-		fi, err := os.Stat(args.NetrcFile)
+	if !args.Host.NoNetrc && !args.Host.CredentialsWasSet {
+		fi, err := os.Stat(args.Host.NetrcFile)
 		if err == nil && !fi.IsDir() {
-			if n, err := netrc.Parse(args.NetrcFile); err == nil {
+			if n, err := netrc.Parse(args.Host.NetrcFile); err == nil {
 				if m := n.Machine(u.Hostname()); m != nil {
 					user, pass := m.Get("login"), m.Get("password")
 					if user != "" {
@@ -403,7 +429,7 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 	}
 
 	// set fallback credentials for localhost when none were specified
-	if !setFallback && !args.CredentialsWasSet && u.Hostname() == "localhost" {
+	if !setFallback && !args.Host.CredentialsWasSet && u.Hostname() == "localhost" {
 		opts = append(opts, transrpc.WithCredentialFallback("transmission", "transmission"))
 	}
 
@@ -423,9 +449,9 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 
 	var ids []interface{}
 	switch {
-	case args.Recent:
+	case args.Filter.Recent:
 		ids = append(ids, transrpc.RecentlyActive)
-	case args.ListAll:
+	case args.Filter.ListAll:
 	default:
 	}
 
@@ -438,13 +464,13 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 
 	// filter torrents
 	var torrents []transrpc.Torrent
-	if args.ListAll || args.Recent {
+	if args.Filter.ListAll || args.Filter.Recent {
 		torrents = res.Torrents
 	} else {
 		for _, t := range res.Torrents {
 			for _, id := range args.Args {
 				g, err := glob.Compile(id)
-				for _, m := range args.MatchOrder {
+				for _, m := range args.Filter.MatchOrder {
 					switch m {
 					case "id":
 						if id == strconv.FormatInt(t.ID, 10) {
