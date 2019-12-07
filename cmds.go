@@ -147,8 +147,7 @@ func doSet(args *Args) error {
 	if len(torrents) == 0 {
 		return nil
 	}
-	cl = cl
-	return nil
+	return doWithAndExecute(cl, transrpc.TorrentSet(convTorrentIDs(torrents)...), "torrent", args.ConfigParams.Name, args.ConfigParams.Value)
 }
 
 // doReq creates the high-level entry points for general torrent manipulation

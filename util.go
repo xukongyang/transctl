@@ -342,15 +342,6 @@ func (tr *TorrentResult) encodeFlat(w io.Writer, args *Args, cl *transrpc.Client
 	return nil
 }
 
-// convTorrentIDs converts torrent list to a hash string identifier list.
-func convTorrentIDs(torrents []transrpc.Torrent) []interface{} {
-	ids := make([]interface{}, len(torrents))
-	for i := 0; i < len(torrents); i++ {
-		ids[i] = torrents[i].HashString
-	}
-	return ids
-}
-
 // ConfigStore is the interface for config stores.
 type ConfigStore interface {
 	GetKey(string) string
@@ -417,6 +408,20 @@ func (r *RemoteConfigStore) GetAllFlat() []string {
 		ret = append(ret, k, m[k])
 	}
 	return ret
+}
+
+// Write satisfies the ConfigStore interface.
+func (r *RemoteConfigStore) Write(string) error {
+	return doWithAndExecute(r.cl, transrpc.SessionSet(), "--remote config", r.setKeys...)
+}
+
+// convTorrentIDs converts torrent list to a hash string identifier list.
+func convTorrentIDs(torrents []transrpc.Torrent) []interface{} {
+	ids := make([]interface{}, len(torrents))
+	for i := 0; i < len(torrents); i++ {
+		ids[i] = torrents[i].HashString
+	}
+	return ids
 }
 
 // addFieldsToMap adds reflected field values to the map.
@@ -494,40 +499,77 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 	}
 }
 
-// Write satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) Write(string) error {
-	req := transrpc.SessionSet()
+// executor interface is the common interface for settable requests.
+type executor interface {
+	Do(context.Context, *transrpc.Client) error
+}
+
+// doWithAndExecute calls the
+func doWithAndExecute(cl *transrpc.Client, req executor, errMsg string, vals ...string) error {
+	if len(vals)%2 != 0 {
+		panic("invalid vals")
+	}
 	v := reflect.ValueOf(req)
-	for i := 0; i < len(r.setKeys); i += 2 {
-		name := "With" + snaker.ForceCamelIdentifier(r.setKeys[i])
+	for i := 0; i < len(vals); i += 2 {
+		name := "With" + snaker.ForceCamelIdentifier(vals[i])
 		f := v.MethodByName(name)
 		if f.Kind() == reflect.Invalid {
-			return fmt.Errorf("unsupported setting --remote config option %q", r.setKeys[i])
+			return fmt.Errorf("unsupported setting %s option %q", errMsg, vals[i])
 		}
 		args := make([]reflect.Value, 1)
 		switch f.Type().In(0).Kind() {
 		case reflect.String:
-			args[0] = reflect.ValueOf(r.setKeys[i+1])
+			args[0] = reflect.ValueOf(vals[i+1])
 		case reflect.Int64:
-			z, err := strconv.ParseInt(r.setKeys[i+1], 10, 64)
+			z, err := strconv.ParseInt(vals[i+1], 10, 64)
 			if err != nil {
 				return err
 			}
 			args[0] = reflect.ValueOf(z)
 		case reflect.Float64:
-			z, err := strconv.ParseFloat(r.setKeys[i+1], 64)
+			z, err := strconv.ParseFloat(vals[i+1], 64)
 			if err != nil {
 				return err
 			}
 			args[0] = reflect.ValueOf(z)
 		case reflect.Bool:
-			b, err := strconv.ParseBool(r.setKeys[i+1])
+			b, err := strconv.ParseBool(vals[i+1])
 			if err != nil {
 				return err
 			}
 			args[0] = reflect.ValueOf(b)
+
+		case reflect.Slice:
+			// split values
+			z := strings.Split(vals[i+1], ",")
+			for j := range z {
+				z[j] = strings.TrimSpace(z[j])
+			}
+
+			// make slice
+			args[0] = reflect.MakeSlice(f.Type().In(0), len(z), len(z))
+			/*switch args[0].Interface().(type) {
+			case []string:
+				args[0] = reflect.ValueOf(z)
+			case []int64:
+				y := make([]int64, len(z))
+				for a := range z {
+					var err error
+					y[a], err = strconv.ParseInt(z[a], 10, 64)
+					if err != nil {
+						return err
+					}
+				}
+				args[0] = reflect.ValueOf(y)
+
+			default:
+				panic(fmt.Sprintf("unknown slice type %v", f.Type().In(0)))
+			}*/
+
+		default:
+			panic(fmt.Sprintf("unknown type %v", f.Type().In(0)))
 		}
-		req = f.Call(args)[0].Interface().(*transrpc.SessionSetRequest)
+		req = f.Call(args)[0].Interface().(executor)
 	}
-	return req.Do(context.Background(), r.cl)
+	return req.Do(context.Background(), cl)
 }
