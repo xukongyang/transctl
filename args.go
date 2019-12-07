@@ -221,8 +221,8 @@ func NewArgs() (*Args, string, error) {
 		"remove", "Remove torrents",
 		"verify", "Verify torrents",
 		"reannounce", "Reannounce torrents",
-		"queue bottom", "Move torrents to bottom of queue",
 		"queue top", "Move torrents to top of queue",
+		"queue bottom", "Move torrents to bottom of queue",
 		"queue up", "Move torrents up in queue",
 		"queue down", "Move torrents down in queue",
 	}
@@ -352,6 +352,7 @@ func (args *Args) loadConfig(cmd string) error {
 		}
 	}
 
+	// check specific command flags
 	switch cmd {
 	case "get", "set", "start", "stop", "move", "remove", "verify",
 		"reannounce", "queue top", "queue bottom", "queue up", "queue down":
@@ -363,6 +364,7 @@ func (args *Args) loadConfig(cmd string) error {
 			!args.Filter.ListAll && !args.Filter.Recent && len(args.Args) == 0:
 			return ErrMustSpecifyAllRecentOrAtLeastOneTorrent
 		}
+
 	case "free-space":
 		// check that either a location was passed as an argument, or specified
 		// via config context options

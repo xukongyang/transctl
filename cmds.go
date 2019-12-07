@@ -129,11 +129,6 @@ func doAdd(args *Args) error {
 	return NewTorrentResult(added).Encode(os.Stdout, args, cl)
 }
 
-// doSet is the high-level entry point for 'set'.
-func doSet(args *Args) error {
-	return nil
-}
-
 // doGet is the high-level entry point for 'get'.
 func doGet(args *Args) error {
 	cl, torrents, err := args.findTorrents()
@@ -143,7 +138,21 @@ func doGet(args *Args) error {
 	return NewTorrentResult(torrents).Encode(os.Stdout, args, cl)
 }
 
-// do is the high-level entry point for 'start'.
+// doSet is the high-level entry point for 'set'.
+func doSet(args *Args) error {
+	cl, torrents, err := args.findTorrents()
+	if err != nil {
+		return err
+	}
+	if len(torrents) == 0 {
+		return nil
+	}
+	cl = cl
+	return nil
+}
+
+// doReq creates the high-level entry points for general torrent manipulation
+// requests.
 func doReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
 	return func(args *Args) error {
 		cl, torrents, err := args.findTorrents()
@@ -217,20 +226,6 @@ func doShutdown(args *Args) error {
 	return cl.SessionClose(context.Background())
 }
 
-// doBlocklistUpdate is the high-level entry point for 'blocklist-update'.
-func doBlocklistUpdate(args *Args) error {
-	cl, err := args.newClient()
-	if err != nil {
-		return err
-	}
-	count, err := cl.BlocklistUpdate(context.Background())
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(os.Stdout, count)
-	return nil
-}
-
 // doFreeSpace is the high-level entry point for 'free-space'.
 func doFreeSpace(args *Args) error {
 	cl, err := args.newClient()
@@ -248,6 +243,20 @@ func doFreeSpace(args *Args) error {
 		}
 		fmt.Fprintln(os.Stdout, path, sz)
 	}
+	return nil
+}
+
+// doBlocklistUpdate is the high-level entry point for 'blocklist-update'.
+func doBlocklistUpdate(args *Args) error {
+	cl, err := args.newClient()
+	if err != nil {
+		return err
+	}
+	count, err := cl.BlocklistUpdate(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stdout, count)
 	return nil
 }
 
