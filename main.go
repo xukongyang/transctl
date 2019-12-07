@@ -35,7 +35,7 @@ func run() error {
 		return err
 	}
 
-	// change flags from config file, if not set
+	// change flags from config file, if not set by command line flags
 	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.output"))); v != "" && !args.Output.OutputWasSet {
 		args.Output.Output = v
 	}
@@ -75,50 +75,31 @@ func run() error {
 		}
 	}
 
-	var f func(*Args) error
-	switch cmd {
-	case "config":
-		f = doConfig
-	case "add":
-		f = doAdd
-	case "get":
-		f = doGet
-	case "set":
-		f = doSet
-	case "start":
-		if args.StartParams.Now {
-			f = doReq(transrpc.TorrentStartNow)
-		} else {
-			f = doReq(transrpc.TorrentStart)
-		}
-	case "stop":
-		f = doReq(transrpc.TorrentStop)
-	case "move":
-		f = doMove
-	case "remove":
-		f = doRemove
-	case "verify":
-		f = doReq(transrpc.TorrentVerify)
-	case "reannounce":
-		f = doReq(transrpc.TorrentReannounce)
-	case "queue top":
-		f = doReq(transrpc.QueueMoveTop)
-	case "queue bottom":
-		f = doReq(transrpc.QueueMoveBottom)
-	case "queue up":
-		f = doReq(transrpc.QueueMoveUp)
-	case "queue down":
-		f = doReq(transrpc.QueueMoveDown)
-	case "stats":
-		f = doStats
-	case "shutdown":
-		f = doShutdown
-	case "free-space":
-		f = doFreeSpace
-	case "blocklist-update":
-		f = doBlocklistUpdate
-	case "port-test":
-		f = doPortTest
+	f := map[string]func(*Args) error{
+		"config":           doConfig,
+		"add":              doAdd,
+		"get":              doGet,
+		"set":              doSet,
+		"start":            doReq(transrpc.TorrentStart),
+		"stop":             doReq(transrpc.TorrentStop),
+		"move":             doMove,
+		"remove":           doRemove,
+		"verify":           doReq(transrpc.TorrentVerify),
+		"reannounce":       doReq(transrpc.TorrentReannounce),
+		"queue top":        doReq(transrpc.QueueMoveTop),
+		"queue bottom":     doReq(transrpc.QueueMoveBottom),
+		"queue up":         doReq(transrpc.QueueMoveUp),
+		"queue down":       doReq(transrpc.QueueMoveDown),
+		"stats":            doStats,
+		"shutdown":         doShutdown,
+		"free-space":       doFreeSpace,
+		"blocklist-update": doBlocklistUpdate,
+		"port-test":        doPortTest,
+	}[cmd]
+
+	//
+	if cmd == "start" && args.StartParams.Now {
+		f = doReq(transrpc.TorrentStartNow)
 	}
 
 	return f(args)
