@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -63,21 +64,27 @@ type Args struct {
 
 	// Filter contains the global filter configuration.
 	Filter struct {
-		// MatchOrder is torrent identifier match order.
-		MatchOrder []string
-
-		// MatchOrderWasSet is the match order was set toggle.
-		MatchOrderWasSet bool
-
 		// ListAll is the all toggle.
 		ListAll bool
 
 		// Recent is the recent toggle.
 		Recent bool
+
+		// MatchOrder is torrent identifier match order.
+		MatchOrder []string
+
+		// MatchOrderWasSet is the match order was set toggle.
+		MatchOrderWasSet bool
 	}
 
 	// Output contains the global output configuration.
 	Output struct {
+		// Output is the output format type.
+		Output string
+
+		// OutputWasSet is the output was set toggle.
+		OutputWasSet bool
+
 		// Human is the toggle to display sizes in powers of 1024 (ie, 1023MiB).
 		Human string
 
@@ -86,12 +93,6 @@ type Args struct {
 
 		// SIWasSet is the si was set toggle.
 		SIWasSet bool
-
-		// Output is the output format type.
-		Output string
-
-		// OutputWasSet is the output was set toggle.
-		OutputWasSet bool
 
 		// NoHeaders is the toggle to disable headers on table output.
 		NoHeaders bool
@@ -148,11 +149,11 @@ type Args struct {
 }
 
 // NewArgs creates the command args.
-func NewArgs() (*Args, error) {
+func NewArgs() (*Args, string, error) {
 	// determine netrc path
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	netrcFile := filepath.Join(homeDir, ".netrc")
 	if runtime.GOOS == "windows" {
@@ -162,7 +163,7 @@ func NewArgs() (*Args, error) {
 	// determine config file path
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	configFile := filepath.Join(configDir, "transctl", "config.ini")
 
@@ -178,41 +179,42 @@ func NewArgs() (*Args, error) {
 	kingpin.Flag("config", "config file").Short('C').Default(configFile).Envar("TRANSCONFIG").PlaceHolder("<file>").StringVar(&args.ConfigFile)
 	kingpin.Flag("context", "config context").Short('c').Envar("TRANSCONTEXT").PlaceHolder("<context>").StringVar(&args.Context)
 	kingpin.Flag("url", "remote host url").Short('U').Envar("TRANSURL").PlaceHolder("<url>").URLVar(&args.Host.URL)
+	kingpin.Flag("proto", "protocol to use").Default("http").PlaceHolder("http").StringVar(&args.Host.Proto)
+	kingpin.Flag("host", "remote host").Short('h').PlaceHolder("localhost:9091").StringVar(&args.Host.Host)
+	kingpin.Flag("rpc-path", "rpc path").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.Host.RpcPath)
+	kingpin.Flag("user", "remote host username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.Host.CredentialsWasSet).StringVar(&args.Host.Credentials)
 	kingpin.Flag("no-netrc", "disable netrc loading").BoolVar(&args.Host.NoNetrc)
 	kingpin.Flag("netrc-file", "netrc file path").Default(netrcFile).PlaceHolder("<file>").StringVar(&args.Host.NetrcFile)
-	kingpin.Flag("proto", "protocol to use").Default("http").PlaceHolder("http").StringVar(&args.Host.Proto)
-	kingpin.Flag("user", "username and password").Short('u').PlaceHolder("<user:pass>").IsSetByUser(&args.Host.CredentialsWasSet).StringVar(&args.Host.Credentials)
-	kingpin.Flag("host", "remote host (default: localhost:9091)").Short('h').PlaceHolder("<host>").StringVar(&args.Host.Host)
-	kingpin.Flag("rpc-path", "rpc path (default: /transmission/rpc/)").Default("/transmission/rpc/").PlaceHolder("<path>").StringVar(&args.Host.RpcPath)
-	kingpin.Flag("timeout", "request timeout (default: 25s)").Default("25s").PlaceHolder("<dur>").DurationVar(&args.Host.Timeout)
+	kingpin.Flag("timeout", "rpc request timeout (default: 25s)").Default("25s").PlaceHolder("<dur>").DurationVar(&args.Host.Timeout)
 
 	// config command
 	configCmd := kingpin.Command("config", "Get and set local and remote config")
 	configCmd.Flag("remote", "get or set remote config option").BoolVar(&args.ConfigParams.Remote)
-	configCmd.Arg("name", "option name").StringVar(&args.ConfigParams.Name)
-	configCmd.Arg("value", "option value").StringVar(&args.ConfigParams.Value)
-	configCmd.Flag("unset", "unset value").BoolVar(&args.ConfigParams.Unset)
 	configCmd.Flag("list", "list all options").Short('l').BoolVar(&args.Filter.ListAll)
 	configCmd.Flag("all", "list all options").Hidden().BoolVar(&args.Filter.ListAll)
+	configCmd.Flag("unset", "unset option").BoolVar(&args.ConfigParams.Unset)
+	configCmd.Arg("name", "option name").StringVar(&args.ConfigParams.Name)
+	configCmd.Arg("value", "option value").StringVar(&args.ConfigParams.Value)
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
 	addCmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
-	addCmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
-	addCmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
 	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
+	addCmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
+	addCmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
+	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
 	addCmd.Flag("peer-limit", "peer limit").Short('L').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
-	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("rm", "remove torrents after adding").IsSetByUser(&args.AddParams.RemoveWasSet).BoolVar(&args.AddParams.Remove)
 	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
 
 	// add retrieval/manipulation commands
 	commands := []string{
 		"get", "Get information about torrents",
+		"set", "Set torrent config options",
 		"start", "Start torrents",
 		"stop", "Stop torrents",
 		"move", "Move torrent location",
@@ -243,19 +245,26 @@ func NewArgs() (*Args, error) {
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.Filter.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Filter.Recent)
-		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.Filter.MatchOrder, "hash", "id", "glob")
+		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.Filter.MatchOrder, "hash", "id", "glob", "regexp")
 
 		switch commands[i] {
 		case "get":
 			cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
-			cmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
-			cmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
 			cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 			cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
+			cmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
+			cmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
+
+		case "set":
+			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
+			cmd.Arg("value", "option value").Required().StringVar(&args.ConfigParams.Value)
+
 		case "start":
 			cmd.Flag("now", "start now").BoolVar(&args.StartParams.Now)
+
 		case "move":
 			cmd.Flag("dest", "move destination").Short('d').PlaceHolder("<dir>").StringVar(&args.MoveParams.Dest)
+
 		case "remove":
 			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
 		}
@@ -286,13 +295,20 @@ func NewArgs() (*Args, error) {
 		fmt.Fprintln(os.Stdout, "transctl", version)
 		os.Exit(0)
 		return nil
-	}).Short('V').Bool()
+	}).Bool()
 
-	return args, nil
+	cmd := kingpin.Parse()
+
+	// load config
+	if err = args.loadConfig(cmd); err != nil {
+		return nil, "", err
+	}
+
+	return args, cmd, nil
 }
 
 // loadConfig loads the configuration file from disk.
-func (args *Args) loadConfig() error {
+func (args *Args) loadConfig(cmd string) error {
 	// check if config file exists, create if not
 	fi, err := os.Stat(args.ConfigFile)
 	switch {
@@ -312,6 +328,48 @@ func (args *Args) loadConfig() error {
 		return err
 	}
 	args.Config.SectionManipFunc, args.Config.SectionNameFunc = ini.GitSectionManipFunc, ini.GitSectionNameFunc
+
+	// change flags from config file, if not set by command line flags
+	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.output"))); v != "" && !args.Output.OutputWasSet {
+		args.Output.Output = v
+	}
+	if v := args.getContextKey("match-order"); v != "" && !args.Filter.MatchOrderWasSet {
+		args.Filter.MatchOrder = strings.Split(v, ",")
+		for i := 0; i < len(args.Filter.MatchOrder); i++ {
+			args.Filter.MatchOrder[i] = strings.ToLower(strings.TrimSpace(args.Filter.MatchOrder[i]))
+		}
+	}
+	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.si"))); v != "" && !args.Output.SIWasSet {
+		args.Output.SI = v == "true" || v == "1"
+	}
+	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("command.add.rm"))); v != "" && !args.AddParams.RemoveWasSet {
+		args.AddParams.Remove = v == "true" || v == "1"
+	}
+	if v := strings.TrimSpace(args.getContextKey("free-space")); cmd == "free-space" && v != "" && len(args.Args) == 0 {
+		args.Args = strings.Split(v, ",")
+		for i := 0; i < len(args.Args); i++ {
+			args.Args[i] = strings.TrimSpace(args.Args[i])
+		}
+	}
+
+	switch cmd {
+	case "get", "set", "start", "stop", "move", "remove", "verify",
+		"reannounce", "queue top", "queue bottom", "queue up", "queue down":
+		// check exactly one of --recent, --all, or len(args.Args) > 0 conditions
+		switch {
+		case args.Filter.ListAll && args.Filter.Recent,
+			args.Filter.ListAll && len(args.Args) != 0,
+			args.Filter.Recent && len(args.Args) != 0,
+			!args.Filter.ListAll && !args.Filter.Recent && len(args.Args) == 0:
+			return ErrMustSpecifyAllRecentOrAtLeastOneTorrent
+		}
+	case "free-space":
+		// check that either a location was passed as an argument, or specified
+		// via config context options
+		if len(args.Args) == 0 {
+			return ErrMustSpecifyAtLeastOneLocation
+		}
+	}
 
 	return nil
 }
@@ -469,7 +527,8 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 	} else {
 		for _, t := range res.Torrents {
 			for _, id := range args.Args {
-				g, err := glob.Compile(id)
+				g, gerr := glob.Compile(id)
+				re, reerr := regexp.Compile(id)
 				for _, m := range args.Filter.MatchOrder {
 					switch m {
 					case "id":
@@ -481,7 +540,11 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 							torrents = append(torrents, t)
 						}
 					case "glob":
-						if err == nil && g.Match(t.Name) {
+						if gerr == nil && g.Match(t.Name) {
+							torrents = append(torrents, t)
+						}
+					case "regexp":
+						if reerr == nil && re.MatchString(t.Name) {
 							torrents = append(torrents, t)
 						}
 					default:
