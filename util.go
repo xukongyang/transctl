@@ -550,7 +550,7 @@ func doWithAndExecute(cl *transrpc.Client, req executor, errMsg string, vals ...
 			}
 
 			// make slice
-			args[0] = reflect.MakeSlice(f.Type().In(0), len(z), len(z))
+			args[0] = reflect.Zero(f.Type().In(0))
 			switch args[0].Interface().(type) {
 			case []string:
 				args[0] = reflect.ValueOf(z)
