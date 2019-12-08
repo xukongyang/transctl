@@ -551,7 +551,7 @@ func doWithAndExecute(cl *transrpc.Client, req executor, errMsg string, vals ...
 
 			// make slice
 			args[0] = reflect.MakeSlice(f.Type().In(0), len(z), len(z))
-			/*switch args[0].Interface().(type) {
+			switch args[0].Interface().(type) {
 			case []string:
 				args[0] = reflect.ValueOf(z)
 			case []int64:
@@ -567,7 +567,7 @@ func doWithAndExecute(cl *transrpc.Client, req executor, errMsg string, vals ...
 
 			default:
 				panic(fmt.Sprintf("unknown slice type %v", f.Type().In(0)))
-			}*/
+			}
 
 		default:
 			panic(fmt.Sprintf("unknown type %v", f.Type().In(0)))
