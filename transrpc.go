@@ -114,10 +114,14 @@ type Duration time.Duration
 
 // String satisfies the fmt.Stringer interface.
 func (d Duration) String() string {
-	if time.Duration(d) == -1*time.Second {
+	switch v := time.Duration(d); v {
+	case -1 * time.Second:
 		return "Done"
+	case -2 * time.Second:
+		return "Unknown"
+	default:
+		return v.String()
 	}
-	return fmt.Sprintf("%v", time.Duration(d))
 }
 
 // UnmarshalJSON satisfies the json.Unmarshaler interface.
