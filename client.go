@@ -157,8 +157,6 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 	}
 	switch res.StatusCode {
 	case http.StatusOK:
-	case http.StatusConflict:
-		return ErrRequestFailed
 	case http.StatusUnauthorized:
 		return ErrUnauthorizedUser
 	default:
@@ -182,7 +180,7 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 
 	// check success
 	if result.Result != "success" {
-		return ErrRequestFailed
+		return &ErrRequestFailed{result.Result}
 	}
 
 	return nil

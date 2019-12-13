@@ -1,6 +1,7 @@
 package transrpc
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -28,9 +29,6 @@ const (
 	// ErrUnknownProblemEncountered is the unknown problem encountered error.
 	ErrUnknownProblemEncountered Error = "unknown problem encountered"
 
-	// ErrRequestFailed is the request failed error.
-	ErrRequestFailed Error = "request failed"
-
 	// ErrRecentlyActiveCanHaveOnlyOneValue is the recently-active can have only one value error.
 	ErrRecentlyActiveCanHaveOnlyOneValue Error = "recently-active can have only one value"
 
@@ -56,6 +54,21 @@ const (
 	// rename path can only be used with one torrent identifier error.
 	ErrTorrentRenamePathCanOnlyBeUsedWithOneTorrentIdentifier Error = "torrent rename path can only be used with one torrent identifier"
 )
+
+// ErrRequestFailed wraps a failed request error.
+type ErrRequestFailed struct {
+	Err string
+}
+
+// Error satisfies the error interface.
+func (err *ErrRequestFailed) Error() string {
+	return fmt.Sprintf("request failed: %v", err.Err)
+}
+
+// Unwrap satisfies the error chain interface.
+func (err *ErrRequestFailed) Unwrap() error {
+	return errors.New(err.Err)
+}
 
 const (
 	// RecentlyActive is the recently active identifier.
