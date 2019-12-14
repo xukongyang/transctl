@@ -299,11 +299,11 @@ func NewArgs() (*Args, string, error) {
 			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
 
 		case "files set-priority":
-			cmd.Arg("mask", "file mask").Required().StringVar(&args.FileMask)
+			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
 			cmd.Arg("priority", "file priority (low, normal, high)").Required().EnumVar(&args.FilesSetPriorityParams.Priority, "low", "normal", "high")
 
 		case "files set-location":
-			cmd.Arg("mask", "file mask").Required().StringVar(&args.FileMask)
+			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
 			cmd.Arg("location", "file location").Required().StringVar(&args.FilesSetLocationParams.Location)
 
 		case "trackers add", "trackers remove":

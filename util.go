@@ -26,7 +26,9 @@ const (
 )
 
 func init() {
-	snaker.AddInitialisms("UTP")
+	if err := snaker.AddInitialisms("UTP"); err != nil {
+		panic(err)
+	}
 }
 
 // Error is the error type.
