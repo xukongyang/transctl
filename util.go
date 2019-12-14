@@ -142,9 +142,9 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 	var f func(io.Writer, *Args, *transrpc.Client) error
 	switch args.Output.Output {
 	case "table":
-		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shorthash")
+		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash")
 	case "wide":
-		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shorthash")
+		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash")
 	case "json":
 		f = tr.encodeJSON
 	case "yaml":
@@ -184,7 +184,7 @@ func (tr *TorrentResult) encodeTable(cols ...string) func(io.Writer, *Args, *tra
 		var hasTotals bool
 		headers, fieldnames, totals, display := make([]string, len(cols)), make([]string, len(cols)), make([]transrpc.ByteCount, len(cols)), make([]bool, len(cols))
 		for i, c := range cols {
-			if c == "shorthash" {
+			if c == "shortHash" {
 				headers[i], fieldnames[i] = "HASH", "hashString"
 				continue
 			}
@@ -231,7 +231,7 @@ func (tr *TorrentResult) encodeTable(cols ...string) func(io.Writer, *Args, *tra
 		for _, t := range torrents {
 			row := make([]string, len(cols))
 			for i := 0; i < len(cols); i++ {
-				if cols[i] == "shorthash" {
+				if cols[i] == "shortHash" {
 					row[i] = t.HashString[:defaultShortHashLen]
 					continue
 				}

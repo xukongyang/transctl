@@ -97,14 +97,8 @@ type Args struct {
 		// NoHeaders is the toggle to disable headers on table output.
 		NoHeaders bool
 
-		// NoHeadersWasSet is the no headers was set toggle.
-		NoHeadersWasSet bool
-
 		// NoTotals is the toggle to disable the total line on table output.
 		NoTotals bool
-
-		// NoTotalsWasSet is the no totals was set toggle.
-		NoTotalsWasSet bool
 	}
 
 	// ConfigParams are the config params.
@@ -222,8 +216,8 @@ func NewArgs() (*Args, string, error) {
 	addCmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
 	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
-	addCmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
-	addCmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
+	addCmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
+	addCmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
@@ -282,8 +276,8 @@ func NewArgs() (*Args, string, error) {
 			cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
 			cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 			cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
-			cmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
-			cmd.Flag("no-totals", "disable table total output").IsSetByUser(&args.Output.NoTotalsWasSet).BoolVar(&args.Output.NoTotals)
+			cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
+			cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
 
 		case "set":
 			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
