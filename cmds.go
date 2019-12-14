@@ -16,17 +16,6 @@ import (
 
 // doConfig is the high-level entry point for 'config'.
 func doConfig(args *Args) error {
-	switch {
-	case args.Filter.ListAll && args.ConfigParams.Unset:
-		return ErrCannotListAllOptionsAndUnset
-	case args.ConfigParams.Remote && args.ConfigParams.Unset:
-		return ErrCannotUnsetARemoteConfigOption
-	case args.ConfigParams.Unset && args.ConfigParams.Name == "":
-		return ErrMustSpecifyConfigOptionNameToUnset
-	case args.ConfigParams.Unset && args.ConfigParams.Value != "":
-		return ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig
-	}
-
 	var store ConfigStore = args.Config
 	if args.ConfigParams.Remote {
 		var err error
@@ -64,10 +53,6 @@ var magnetRE = regexp.MustCompile(`(?i)^magnet:\?`)
 
 // doAdd is the high-level entry point for 'add'.
 func doAdd(args *Args) error {
-	if len(args.Args) < 1 {
-		return ErrMustSpecifyAtLeastOneTorrentOrURI
-	}
-
 	cl, err := args.newClient()
 	if err != nil {
 		return err

@@ -25,6 +25,10 @@ const (
 `
 )
 
+func init() {
+	snaker.AddInitialisms("UTP")
+}
+
 // Error is the error type.
 type Error string
 
@@ -34,25 +38,25 @@ func (err Error) Error() string {
 }
 
 const (
-	// ErrMustSpecifyAllRecentOrAtLeastOneTorrent is the must specify all,
-	// recent or at least one torrent error.
-	ErrMustSpecifyAllRecentOrAtLeastOneTorrent Error = "must specify --all, --recent or at least one torrent"
+	// ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent is the must specify
+	// list, recent, filter or at least one torrent error.
+	ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent Error = "must specify --list, --recent, --filter or at least one torrent"
+
+	// ErrMustSpecifyListOrOptionName is the must specify list or option name
+	// error.
+	ErrMustSpecifyListOrOptionName Error = "must specify --list or option name"
 
 	// ErrConfigFileCannotBeADirectory is the config file cannot be a directory
 	// error.
 	ErrConfigFileCannotBeADirectory Error = "config file cannot be a directory"
 
-	// ErrMustSpecifyAtLeastOneTorrentOrURI is the must specify at least one
-	// torrent or uri error.
-	ErrMustSpecifyAtLeastOneTorrentOrURI Error = "must specify at least one torrent or URI"
-
 	// ErrMustSpecifyAtLeastOneLocation is the must specify at least one
 	// location error.
 	ErrMustSpecifyAtLeastOneLocation Error = "must specify at least one location"
 
-	// ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig is the cannot
-	// specify unsite while trying to set a value with config error.
-	ErrCannotSpecifyUnsetWhileTryingToSetAValueWithConfig Error = "cannot specify --unset while trying to set a value with config"
+	// ErrCannotSpecifyUnsetAndAlsoSetAnOptionValue is the cannot specify unset
+	// and also set an option value error.
+	ErrCannotSpecifyUnsetAndAlsoSetAnOptionValue Error = "cannot specify --unset and also set an option value"
 
 	// ErrInvalidProtoHostOrRpcPath is the invalid proto, host, or rpc-path
 	// error.
@@ -85,6 +89,8 @@ type TorrentResult struct {
 	index    int
 }
 
+// NewTorrentResult creates a new torrent result output encoder for the passed
+// torrents.
 func NewTorrentResult(torrents []transrpc.Torrent) *TorrentResult {
 	return &TorrentResult{
 		torrents: torrents,
@@ -134,9 +140,9 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 	var f func(io.Writer, *Args, *transrpc.Client) error
 	switch args.Output.Output {
 	case "table":
-		f = tr.encodeTable
+		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shorthash")
 	case "wide":
-		f = tr.encodeWide
+		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shorthash")
 	case "json":
 		f = tr.encodeJSON
 	case "yaml":
@@ -159,136 +165,128 @@ var headerNames = map[string]string{
 
 // encodeTableColumns encodes the specified table results with the included
 // columns.
-func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrpc.Client, cols ...string) error {
-	// check field names
-	typ := reflect.TypeOf(transrpc.Torrent{})
-	fields := make(map[string]int, typ.NumField())
-	for i := 0; i < typ.NumField(); i++ {
-		tag := typ.Field(i).Tag.Get("json")
-		if tag == "" || tag == "-" {
-			continue
-		}
-		fields[strings.SplitN(tag, ",", 2)[0]] = i
-	}
-
-	// build headers and field names
-	var hasTotals bool
-	headers, fieldnames, totals, display := make([]string, len(cols)), make([]string, len(cols)), make([]transrpc.ByteCount, len(cols)), make([]bool, len(cols))
-	for i, c := range cols {
-		if c == "shorthash" {
-			headers[i], fieldnames[i] = "HASH", "hashString"
-			continue
-		}
-		n, ok := fields[c]
-		if !ok {
-			return fmt.Errorf("invalid torrent field %q", c)
-		}
-		headers[i] = strings.ReplaceAll(strings.ToUpper(snaker.CamelToSnakeIdentifier(typ.Field(n).Name)), "_", " ")
-		if h, ok := headerNames[headers[i]]; ok {
-			headers[i] = h
-		}
-		fieldnames[i] = c
-	}
-
-	// build base request
-	var torrents []transrpc.Torrent
-	if len(tr.torrents) != 0 {
-		req := transrpc.TorrentGet(convTorrentIDs(tr.torrents)...).WithFields(fieldnames...)
-		res, err := req.Do(context.Background(), cl)
-		if err != nil {
-			return err
-		}
-		torrents = res.Torrents
-	}
-
-	// tablewriter package is temporary until tblfmt is fixed
-	tbl := tablewriter.NewWriter(w)
-	if !args.Output.NoHeaders {
-		tbl.SetHeader(headers)
-	}
-	tbl.SetAutoWrapText(false)
-	tbl.SetAutoFormatHeaders(true)
-	tbl.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	tbl.SetAlignment(tablewriter.ALIGN_LEFT)
-	tbl.SetCenterSeparator("")
-	tbl.SetColumnSeparator("")
-	tbl.SetRowSeparator("")
-	tbl.SetHeaderLine(false)
-	tbl.SetBorder(false)
-	tbl.SetTablePadding("\t") // pad with tabs
-	tbl.SetNoWhiteSpace(true)
-
-	// add torrents
-	for _, t := range torrents {
-		row := make([]string, len(cols))
-		for i := 0; i < len(cols); i++ {
-			if cols[i] == "shorthash" {
-				row[i] = t.HashString[:defaultShortHashLen]
+func (tr *TorrentResult) encodeTable(cols ...string) func(io.Writer, *Args, *transrpc.Client) error {
+	return func(w io.Writer, args *Args, cl *transrpc.Client) error {
+		// check field names
+		typ := reflect.TypeOf(transrpc.Torrent{})
+		fields := make(map[string]int, typ.NumField())
+		for i := 0; i < typ.NumField(); i++ {
+			tag := typ.Field(i).Tag.Get("json")
+			if tag == "" || tag == "-" {
 				continue
 			}
+			fields[strings.SplitN(tag, ",", 2)[0]] = i
+		}
 
-			v := reflect.ValueOf(t).Field(fields[cols[i]]).Interface()
-			x, ok := v.(transrpc.ByteCount)
+		// build headers and field names
+		var hasTotals bool
+		headers, fieldnames, totals, display := make([]string, len(cols)), make([]string, len(cols)), make([]transrpc.ByteCount, len(cols)), make([]bool, len(cols))
+		for i, c := range cols {
+			if c == "shorthash" {
+				headers[i], fieldnames[i] = "HASH", "hashString"
+				continue
+			}
+			n, ok := fields[c]
 			if !ok {
-				row[i] = fmt.Sprintf("%v", v)
-				continue
+				return fmt.Errorf("invalid torrent field %q", c)
 			}
-
-			hasTotals = true
-			totals[i] += x
-			display[i] = true
-
-			suffix, prec := "", 2
-			if headers[i] == "UP" || headers[i] == "DOWN" {
-				suffix = "/s"
+			headers[i] = strings.ReplaceAll(strings.ToUpper(snaker.CamelToSnakeIdentifier(typ.Field(n).Name)), "_", " ")
+			if h, ok := headerNames[headers[i]]; ok {
+				headers[i] = h
 			}
-			if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
-				if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
-					prec = 0
-				}
-				row[i] = x.Format(!args.Output.SI, prec, suffix)
-			} else {
-				row[i] = fmt.Sprintf("%d%s", x, suffix)
-			}
+			fieldnames[i] = c
 		}
-		tbl.Append(row)
-	}
 
-	if !args.Output.NoTotals && hasTotals && len(torrents) > 0 {
-		row := make([]string, len(cols))
-		for i := 0; i < len(totals); i++ {
-			if !display[i] {
-				continue
+		// build base request
+		var torrents []transrpc.Torrent
+		if len(tr.torrents) != 0 {
+			req := transrpc.TorrentGet(convTorrentIDs(tr.torrents)...).WithFields(fieldnames...)
+			res, err := req.Do(context.Background(), cl)
+			if err != nil {
+				return err
 			}
-			x := totals[i]
-			suffix, prec := "", 2
-			if headers[i] == "UP" || headers[i] == "DOWN" {
-				suffix = "/s"
-			}
-			if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
-				if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
-					prec = 0
-				}
-				row[i] = x.Format(!args.Output.SI, prec, suffix)
-			} else {
-				row[i] = fmt.Sprintf("%d%s", x, suffix)
-			}
+			torrents = res.Torrents
 		}
-		tbl.Append(row)
+
+		// tablewriter package is temporary until tblfmt is fixed
+		tbl := tablewriter.NewWriter(w)
+		if !args.Output.NoHeaders {
+			tbl.SetHeader(headers)
+		}
+		tbl.SetAutoWrapText(false)
+		tbl.SetAutoFormatHeaders(true)
+		tbl.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+		tbl.SetAlignment(tablewriter.ALIGN_LEFT)
+		tbl.SetCenterSeparator("")
+		tbl.SetColumnSeparator("")
+		tbl.SetRowSeparator("")
+		tbl.SetHeaderLine(false)
+		tbl.SetBorder(false)
+		tbl.SetTablePadding("\t") // pad with tabs
+		tbl.SetNoWhiteSpace(true)
+
+		// add torrents
+		for _, t := range torrents {
+			row := make([]string, len(cols))
+			for i := 0; i < len(cols); i++ {
+				if cols[i] == "shorthash" {
+					row[i] = t.HashString[:defaultShortHashLen]
+					continue
+				}
+
+				v := reflect.ValueOf(t).Field(fields[cols[i]]).Interface()
+				x, ok := v.(transrpc.ByteCount)
+				if !ok {
+					row[i] = fmt.Sprintf("%v", v)
+					continue
+				}
+
+				hasTotals = true
+				totals[i] += x
+				display[i] = true
+
+				suffix, prec := "", 2
+				if headers[i] == "UP" || headers[i] == "DOWN" {
+					suffix = "/s"
+				}
+				if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+					if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
+						prec = 0
+					}
+					row[i] = x.Format(!args.Output.SI, prec, suffix)
+				} else {
+					row[i] = fmt.Sprintf("%d%s", x, suffix)
+				}
+			}
+			tbl.Append(row)
+		}
+
+		if !args.Output.NoTotals && hasTotals && len(torrents) > 0 {
+			row := make([]string, len(cols))
+			for i := 0; i < len(totals); i++ {
+				if !display[i] {
+					continue
+				}
+				x := totals[i]
+				suffix, prec := "", 2
+				if headers[i] == "UP" || headers[i] == "DOWN" {
+					suffix = "/s"
+				}
+				if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+					if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
+						prec = 0
+					}
+					row[i] = x.Format(!args.Output.SI, prec, suffix)
+				} else {
+					row[i] = fmt.Sprintf("%d%s", x, suffix)
+				}
+			}
+			tbl.Append(row)
+		}
+
+		tbl.Render()
+		return nil
 	}
-
-	tbl.Render()
-	return nil
-}
-
-// encodeTable encodes the torrent results to the writer as a table.
-func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Client) error {
-	return tr.encodeTableColumns(w, args, cl, "id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shorthash")
-}
-
-// encodeWide encodes the torrent results to the writer as a table.
-func (tr *TorrentResult) encodeWide(w io.Writer, args *Args, cl *transrpc.Client) error {
-	return tr.encodeTableColumns(w, args, cl, "id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone")
 }
 
 // encodeJSON encodes the torrent results to the writer as a table.

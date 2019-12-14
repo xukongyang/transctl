@@ -230,7 +230,7 @@ func NewArgs() (*Args, string, error) {
 	addCmd.Flag("paused", "start torrent paused").Short('P').BoolVar(&args.AddParams.Paused)
 	addCmd.Flag("peer-limit", "peer limit").Short('L').PlaceHolder("<limit>").Int64Var(&args.AddParams.PeerLimit)
 	addCmd.Flag("rm", "remove torrents after adding").IsSetByUser(&args.AddParams.RemoveWasSet).BoolVar(&args.AddParams.Remove)
-	addCmd.Arg("torrents", "torrent file or URL").StringsVar(&args.Args)
+	addCmd.Arg("torrents", "torrent file or URL").Required().StringsVar(&args.Args)
 
 	// add retrieval/manipulation commands
 	commands := []string{
@@ -399,20 +399,37 @@ func (args *Args) loadConfig(cmd string) error {
 
 	// check specific command flags
 	switch cmd {
-	case "get", "set", "start", "stop", "move", "remove", "verify",
-		"reannounce", "queue top", "queue bottom", "queue up", "queue down":
-		// check exactly one of --recent, --all, or len(args.Args) > 0 conditions
+	// check that either a name was passed, or that --all was specified
+	case "config":
+		switch {
+		case args.Filter.ListAll && args.ConfigParams.Unset:
+			return ErrCannotListAllOptionsAndUnset
+		case args.ConfigParams.Remote && args.ConfigParams.Unset:
+			return ErrCannotUnsetARemoteConfigOption
+		case args.ConfigParams.Unset && args.ConfigParams.Name == "":
+			return ErrMustSpecifyConfigOptionNameToUnset
+		case args.ConfigParams.Unset && args.ConfigParams.Value != "":
+			return ErrCannotSpecifyUnsetAndAlsoSetAnOptionValue
+		case !args.Filter.ListAll && args.ConfigParams.Name == "":
+			return ErrMustSpecifyListOrOptionName
+		}
+
+	// check exactly one of --recent, --all, or len(args.Args) > 0 conditions
+	case "get", "set", "start", "stop", "move", "remove", "verify", "reannounce",
+		"peers get", "files get", "files set-priority", "files set-location",
+		"trackers get", "trackers add", "trackers replace", "trackers remove",
+		"queue top", "queue bottom", "queue up", "queue down":
 		switch {
 		case args.Filter.ListAll && args.Filter.Recent,
 			args.Filter.ListAll && len(args.Args) != 0,
 			args.Filter.Recent && len(args.Args) != 0,
 			!args.Filter.ListAll && !args.Filter.Recent && len(args.Args) == 0:
-			return ErrMustSpecifyAllRecentOrAtLeastOneTorrent
+			return ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent
 		}
 
+	// check that either a location was passed as an argument, or specified via
+	// config context options
 	case "free-space":
-		// check that either a location was passed as an argument, or specified
-		// via config context options
 		if len(args.Args) == 0 {
 			return ErrMustSpecifyAtLeastOneLocation
 		}
