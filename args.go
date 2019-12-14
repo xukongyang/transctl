@@ -141,6 +141,27 @@ type Args struct {
 		Remove bool
 	}
 
+	// FilesSetPriorityParams are the files set-priority params.
+	FilesSetPriorityParams struct {
+		Priority string
+	}
+
+	// FilesSetLocationParams are the files set-location params.
+	FilesSetLocationParams struct {
+		Location string
+	}
+
+	// TrackersReplacePramas are the trackers replace params.
+	TrackersReplaceParams struct {
+		Replace string
+	}
+
+	// FileMask is the file mask for files operations.
+	FileMask string
+
+	// Tracker is the tracker for trackers operations.
+	Tracker string
+
 	// Args are remaining global arguments.
 	Args []string
 
@@ -225,22 +246,31 @@ func NewArgs() (*Args, string, error) {
 		"queue bottom", "Move torrents to bottom of queue",
 		"queue up", "Move torrents up in queue",
 		"queue down", "Move torrents down in queue",
+		"peers get", "Get information about peers",
+		"files get", "Get information about files",
+		"files set-priority", "Set priority for torrent files",
+		"files set-location", "Set location for torrent files",
+		"trackers get", "Get information about trackers",
+		"trackers add", "Add tracker to torrents",
+		"trackers replace", "Replace tracker for torrents",
+		"trackers remove", "Remove tracker from torrents",
 	}
 
-	var queueCmd *kingpin.CmdClause
+	cmds := map[string]*kingpin.CmdClause{
+		"queue":    kingpin.Command("queue", "Change torrent queue position"),
+		"peers":    kingpin.Command("peers", "Retrieve information about peers"),
+		"files":    kingpin.Command("files", "Change priority and location of torrent files"),
+		"trackers": kingpin.Command("trackers", "Change torrent trackers"),
+	}
 	for i := 0; i < len(commands); i += 2 {
 		f := kingpin.Command
-
-		// handle queue command creation
-		if strings.HasPrefix(commands[i], "queue ") {
-			if queueCmd == nil {
-				queueCmd = kingpin.Command("queue", "Change torrent queue position")
-			}
-			f = queueCmd.Command
+		cmdName := commands[i]
+		if s := strings.SplitN(commands[i], " ", 2); len(s) > 1 {
+			f, cmdName = cmds[s[0]].Command, s[1]
 		}
 
 		// add command
-		cmd := f(strings.TrimPrefix(commands[i], "queue "), commands[i+1])
+		cmd := f(cmdName, commands[i+1])
 		cmd.Flag("list", "list all torrents").Short('l').BoolVar(&args.Filter.ListAll)
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.Filter.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
@@ -248,8 +278,8 @@ func NewArgs() (*Args, string, error) {
 		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.Filter.MatchOrder, "hash", "id", "glob", "regexp")
 
 		switch commands[i] {
-		case "get":
-			cmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
+		case "get", "files get", "trackers get":
+			cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
 			cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 			cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 			cmd.Flag("no-headers", "disable table header output").IsSetByUser(&args.Output.NoHeadersWasSet).BoolVar(&args.Output.NoHeaders)
@@ -267,9 +297,24 @@ func NewArgs() (*Args, string, error) {
 
 		case "remove":
 			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
+
+		case "files set-priority":
+			cmd.Arg("mask", "file mask").Required().StringVar(&args.FileMask)
+			cmd.Arg("priority", "file priority (low, normal, high)").Required().EnumVar(&args.FilesSetPriorityParams.Priority, "low", "normal", "high")
+
+		case "files set-location":
+			cmd.Arg("mask", "file mask").Required().StringVar(&args.FileMask)
+			cmd.Arg("location", "file location").Required().StringVar(&args.FilesSetLocationParams.Location)
+
+		case "trackers add", "trackers remove":
+			cmd.Arg("tracker", "tracker url").Required().StringVar(&args.Tracker)
+
+		case "trackers replace":
+			cmd.Arg("tracker", "tracker url").Required().StringVar(&args.Tracker)
+			cmd.Arg("replace", "replace url").Required().StringVar(&args.TrackersReplaceParams.Replace)
 		}
 
-		cmd.Arg("torrents", "torrent name or identifier").StringsVar(&args.Args)
+		cmd.Arg("torrents", "torrent id, name, or hash").StringsVar(&args.Args)
 	}
 
 	// stats command

@@ -283,7 +283,7 @@ func (tr *TorrentResult) encodeTableColumns(w io.Writer, args *Args, cl *transrp
 
 // encodeTable encodes the torrent results to the writer as a table.
 func (tr *TorrentResult) encodeTable(w io.Writer, args *Args, cl *transrpc.Client) error {
-	return tr.encodeTableColumns(w, args, cl, "id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone")
+	return tr.encodeTableColumns(w, args, cl, "id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shorthash")
 }
 
 // encodeWide encodes the torrent results to the writer as a table.

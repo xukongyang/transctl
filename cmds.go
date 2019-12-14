@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/kenshaw/transrpc"
@@ -193,6 +194,46 @@ func doRemove(args *Args) error {
 	).Do(context.Background(), cl)
 }
 
+// doPeersGet is the high-level entry point for 'peers get'.
+func doPeersGet(args *Args) error {
+	return nil
+}
+
+// doFilesGet is the high-level entry point for 'files get'.
+func doFilesGet(args *Args) error {
+	return nil
+}
+
+// doFilesSetPriority is the high-level entry point for 'files set-priority'.
+func doFilesSetPriority(args *Args) error {
+	return nil
+}
+
+// doFilesSetLocation is the high-level entry point for 'files set-location'.
+func doFilesSetLocation(args *Args) error {
+	return nil
+}
+
+// doTrackersGet is the high-level entry point for 'trackers get'.
+func doTrackersGet(args *Args) error {
+	return nil
+}
+
+// doTrackersAdd is the high-level entry point for 'trackers add'.
+func doTrackersAdd(args *Args) error {
+	return nil
+}
+
+// doTrackersReplace is the high-level entry point for 'trackers replace'.
+func doTrackersReplace(args *Args) error {
+	return nil
+}
+
+// doTrackersRemove is the high-level entry point for 'trackers remove'.
+func doTrackersRemove(args *Args) error {
+	return nil
+}
+
 // doStats is the high-level entry point for 'stats'.
 func doStats(args *Args) error {
 	cl, err := args.newClient()
@@ -233,14 +274,20 @@ func doFreeSpace(args *Args) error {
 	}
 	for _, path := range args.Args {
 		size, err := cl.FreeSpace(context.Background(), path)
-		if err != nil {
-			return err
-		}
-		sz := fmt.Sprintf("%d", size)
-		if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+		var sz string
+		switch {
+		case err != nil:
+			if e, ok := err.(*transrpc.ErrRequestFailed); ok {
+				sz = "error: " + e.Err
+			} else {
+				sz = "error: " + err.Error()
+			}
+		case args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI:
 			sz = size.Format(!args.Output.SI, 2, "")
+		default:
+			sz = strconv.FormatInt(int64(size), 10)
 		}
-		fmt.Fprintln(os.Stdout, path, sz)
+		fmt.Fprintf(os.Stdout, "%s\t%s\n", path, sz)
 	}
 	return nil
 }
