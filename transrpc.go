@@ -362,6 +362,14 @@ type Torrent struct {
 	WebseedsSendingToUs int64     `json:"webseedsSendingToUs,omitempty" yaml:"webseedsSendingToUs,omitempty"` // tr_stat
 }
 
+// ShortHash returns the short hash of the torrent.
+func (t Torrent) ShortHash() string {
+	if len(t.HashString) < 7 {
+		return ""
+	}
+	return t.HashString[:7]
+}
+
 // Request is a generic request used when working with a list of torrent
 // identifiers.
 type Request struct {
