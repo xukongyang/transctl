@@ -608,7 +608,8 @@ type executor interface {
 	Do(context.Context, *transrpc.Client) error
 }
 
-// doWithAndExecute calls the
+// doWithAndExecute calls the 'With*' method on the reflected request for the
+// provided name, value pairs in vals.
 func doWithAndExecute(cl *transrpc.Client, req executor, errMsg string, vals ...string) error {
 	if len(vals)%2 != 0 {
 		panic("invalid vals")

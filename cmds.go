@@ -117,7 +117,7 @@ func doAdd(args *Args) error {
 
 // doGet is the high-level entry point for 'get'.
 func doGet(args *Args) error {
-	cl, torrents, err := args.findTorrents()
+	cl, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func doGet(args *Args) error {
 
 // doSet is the high-level entry point for 'set'.
 func doSet(args *Args) error {
-	cl, torrents, err := args.findTorrents()
+	cl, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func doSet(args *Args) error {
 // requests.
 func doReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
 	return func(args *Args) error {
-		cl, torrents, err := args.findTorrents()
+		cl, torrents, err := findTorrents(args)
 		if err != nil {
 			return err
 		}
@@ -153,7 +153,7 @@ func doReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
 
 // doMove is the high-level entry point for 'move'.
 func doMove(args *Args) error {
-	cl, torrents, err := args.findTorrents()
+	cl, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func doMove(args *Args) error {
 
 // doRemove is the high-level entry point for 'remove'.
 func doRemove(args *Args) error {
-	cl, torrents, err := args.findTorrents()
+	cl, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}

@@ -3,8 +3,8 @@ module github.com/kenshaw/transctl
 go 1.13
 
 require (
-	github.com/PaesslerAG/gval v1.0.1 // indirect
-	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
+	github.com/PaesslerAG/gval v1.0.1
+	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/kingpin v1.3.8-0.20191202215629-0ce3bba646ba
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
@@ -16,5 +16,4 @@ require (
 	github.com/olekukonko/tablewriter v0.0.4
 	gopkg.in/yaml.v2 v2.2.7 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
-	k8s.io/client-go v11.0.0+incompatible
 )
