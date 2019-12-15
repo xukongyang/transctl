@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/snaker"
@@ -18,7 +19,6 @@ import (
 )
 
 const (
-	defaultShortHashLen   = 7
 	minimumHashCompareLen = 5
 	defaultConfig         = `[default]
 	output=table
@@ -64,9 +64,6 @@ const (
 	// error.
 	ErrInvalidProtoHostOrRpcPath Error = "invalid --proto, --host, or --rpc-path"
 
-	// ErrInvalidMatchOrder is the invalid match order error.
-	ErrInvalidMatchOrder Error = "invalid match order"
-
 	// ErrCannotListAllOptionsAndUnset is the cannot list all options and unset
 	// error.
 	ErrCannotListAllOptionsAndUnset Error = "cannot --list all options and --unset"
@@ -82,6 +79,12 @@ const (
 	// ErrInvalidOutputOptionSpecified is the invalid output option specified
 	// error.
 	ErrInvalidOutputOptionSpecified Error = "invalid --output option specified"
+
+	// ErrSortByNotInColumnList is the sort by not in column list error.
+	ErrSortByNotInColumnList Error = "--sort-by not in column list"
+
+	// ErrMustSpecifyAtLeastOneOutputColumn is the must specify at least one output column error.
+	ErrMustSpecifyAtLeastOneOutputColumn Error = "must specify at least one output column"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
@@ -140,11 +143,15 @@ func (*TorrentResult) NextResultSet() bool {
 // io.Writer.
 func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) error {
 	var f func(io.Writer, *Args, *transrpc.Client) error
-	switch args.Output.Output {
+	switch output := strings.SplitN(args.Output.Output, "=", 2); output[0] {
 	case "table":
-		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash")
+		cols := []string{"id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash"}
+		if len(output) > 1 {
+			cols = strings.Split(output[1], ",")
+		}
+		f = tr.encodeTable(cols...)
 	case "wide":
-		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash")
+		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "addedDate", "downloadDir", "shortHash")
 	case "json":
 		f = tr.encodeJSON
 	case "yaml":
@@ -157,46 +164,59 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 	return f(w, args, cl)
 }
 
-// headerNames are column header names.
-var headerNames = map[string]string{
-	"RATE DOWNLOAD": "DOWN",
-	"RATE UPLOAD":   "UP",
-	"HAVE VALID":    "HAVE",
-	"PERCENT DONE":  "%",
-}
-
 // encodeTableColumns encodes the specified table results with the included
 // columns.
-func (tr *TorrentResult) encodeTable(cols ...string) func(io.Writer, *Args, *transrpc.Client) error {
+func (tr *TorrentResult) encodeTable(columns ...string) func(io.Writer, *Args, *transrpc.Client) error {
+	// typ := reflect.TypeOf(transrpc.Torrent{})
 	return func(w io.Writer, args *Args, cl *transrpc.Client) error {
-		// check field names
-		typ := reflect.TypeOf(transrpc.Torrent{})
-		fields := make(map[string]int, typ.NumField())
-		for i := 0; i < typ.NumField(); i++ {
-			tag := typ.Field(i).Tag.Get("json")
-			if tag == "" || tag == "-" {
+		// check that at least one column was non-empty
+		var cols []string
+		for i := 0; i < len(columns); i++ {
+			c := strings.TrimSpace(columns[i])
+			if c == "" {
 				continue
 			}
-			fields[strings.SplitN(tag, ",", 2)[0]] = i
+			cols = append(cols, c)
+		}
+		if len(cols) < 1 {
+			return ErrMustSpecifyAtLeastOneOutputColumn
 		}
 
-		// build headers and field names
-		var hasTotals bool
-		headers, fieldnames, totals, display := make([]string, len(cols)), make([]string, len(cols)), make([]transrpc.ByteCount, len(cols)), make([]bool, len(cols))
-		for i, c := range cols {
-			if c == "shortHash" {
-				headers[i], fieldnames[i] = "HASH", "hashString"
-				continue
+		// build column mappings
+		inverseCols := make(map[string]string, len(args.Output.ColumnNames))
+		for k, v := range args.Output.ColumnNames {
+			inverseCols[v] = k
+		}
+		headers := make([]string, len(cols))
+		fieldnames := make([]string, len(cols))
+		colnames := make([]string, len(cols))
+		sortByField := ""
+		sortBy := strings.TrimSpace(args.Output.SortBy)
+		for i := 0; i < len(cols); i++ {
+			if c, ok := inverseCols[cols[i]]; ok {
+				cols[i] = c
 			}
-			n, ok := fields[c]
-			if !ok {
-				return fmt.Errorf("invalid torrent field %q", c)
-			}
-			headers[i] = strings.ReplaceAll(strings.ToUpper(snaker.CamelToSnakeIdentifier(typ.Field(n).Name)), "_", " ")
-			if h, ok := headerNames[headers[i]]; ok {
+			headers[i] = cols[i]
+			if h, ok := args.Output.ColumnNames[cols[i]]; ok {
 				headers[i] = h
 			}
-			fieldnames[i] = c
+			headers[i] = strings.ToUpper(headers[i])
+			if cols[i] == "shortHash" {
+				fieldnames[i] = "hashString"
+			} else {
+				fieldnames[i] = cols[i]
+			}
+			colnames[i] = snaker.ForceCamelIdentifier(cols[i])
+			if sortBy == cols[i] || strings.EqualFold(sortBy, headers[i]) {
+				sortByField = colnames[i]
+			}
+		}
+
+		switch {
+		case sortByField == "" && !args.Output.SortByWasSet:
+			sortByField = colnames[0]
+		case sortByField == "":
+			return ErrSortByNotInColumnList
 		}
 
 		// build base request
@@ -209,6 +229,83 @@ func (tr *TorrentResult) encodeTable(cols ...string) func(io.Writer, *Args, *tra
 			}
 			torrents = res.Torrents
 		}
+
+		// sort
+		sort.Slice(torrents, func(i, j int) bool {
+			a := reflect.ValueOf(torrents[i]).FieldByName(sortByField)
+			if a.Kind() == reflect.Invalid {
+				a = reflect.ValueOf(torrents[i]).MethodByName(sortByField)
+				if a.Kind() == reflect.Invalid {
+					panic("unknown torrent field or method " + args.Output.SortBy)
+				}
+				a = a.Call([]reflect.Value{})[0]
+			}
+			b := reflect.ValueOf(torrents[j]).FieldByName(sortByField)
+			if b.Kind() == reflect.Invalid {
+				b = reflect.ValueOf(torrents[j]).MethodByName(sortByField)
+				if b.Kind() == reflect.Invalid {
+					panic("unknown torrent field or method " + args.Output.SortBy)
+				}
+				b = b.Call([]reflect.Value{})[0]
+			}
+
+			switch x := a.Interface().(type) {
+			case string:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(string)
+				}
+				return x < b.Interface().(string)
+			case int64:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(int64)
+				}
+				return x < b.Interface().(int64)
+			case float64:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(float64)
+				}
+				return x < b.Interface().(float64)
+			case transrpc.Percent:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(transrpc.Percent)
+				}
+				return x < b.Interface().(transrpc.Percent)
+			case transrpc.Status:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(transrpc.Status)
+				}
+				return x < b.Interface().(transrpc.Status)
+			case transrpc.Priority:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(transrpc.Priority)
+				}
+				return x < b.Interface().(transrpc.Priority)
+			case transrpc.Encryption:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(transrpc.Encryption)
+				}
+				return x < b.Interface().(transrpc.Encryption)
+			case transrpc.ByteCount:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(transrpc.ByteCount)
+				}
+				return x < b.Interface().(transrpc.ByteCount)
+			case transrpc.Duration:
+				if args.Output.SortOrder == "desc" {
+					return x > b.Interface().(transrpc.Duration)
+				}
+				return x < b.Interface().(transrpc.Duration)
+			case transrpc.Time:
+				if args.Output.SortOrder == "desc" {
+					return time.Time(x).After(b.Interface().(time.Time))
+				}
+				return time.Time(x).Before(b.Interface().(time.Time))
+			case transrpc.Bool:
+				return false
+			default:
+				panic(fmt.Sprintf("unknown comparison type %T", a.Interface()))
+			}
+		})
 
 		// tablewriter package is temporary until tblfmt is fixed
 		tbl := tablewriter.NewWriter(w)
@@ -227,25 +324,29 @@ func (tr *TorrentResult) encodeTable(cols ...string) func(io.Writer, *Args, *tra
 		tbl.SetTablePadding("\t") // pad with tabs
 		tbl.SetNoWhiteSpace(true)
 
-		// add torrents
+		// process torrents
+		hasTotals := false
+		display, totals := make([]bool, len(cols)), make([]transrpc.ByteCount, len(cols))
 		for _, t := range torrents {
 			row := make([]string, len(cols))
 			for i := 0; i < len(cols); i++ {
-				if cols[i] == "shortHash" {
-					row[i] = t.HashString[:defaultShortHashLen]
-					continue
+				v := reflect.ValueOf(t).FieldByName(colnames[i])
+				if v.Kind() == reflect.Invalid {
+					v = reflect.ValueOf(t).MethodByName(colnames[i])
+					if v.Kind() == reflect.Invalid {
+						return fmt.Errorf("unknown field or method %s", cols[i])
+					}
+					v = v.Call([]reflect.Value{})[0]
 				}
 
-				v := reflect.ValueOf(t).Field(fields[cols[i]]).Interface()
-				x, ok := v.(transrpc.ByteCount)
+				x, ok := v.Interface().(transrpc.ByteCount)
 				if !ok {
 					row[i] = fmt.Sprintf("%v", v)
 					continue
 				}
 
-				hasTotals = true
 				totals[i] += x
-				display[i] = true
+				hasTotals, display[i] = true, true
 
 				suffix, prec := "", 2
 				if headers[i] == "UP" || headers[i] == "DOWN" {
@@ -327,7 +428,7 @@ func (tr *TorrentResult) encodeFlat(w io.Writer, args *Args, cl *transrpc.Client
 		if i != 0 {
 			fmt.Fprintln(w)
 		}
-		fmt.Fprintf(w, "[torrent %s]\n", t.HashString[:defaultShortHashLen])
+		fmt.Fprintf(w, "[torrent %s]\n", t.ShortHash())
 		m := make(map[string]string)
 		addFieldsToMap(m, "", reflect.ValueOf(t))
 		var keys []string

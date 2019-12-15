@@ -1,3 +1,10 @@
+github.com/PaesslerAG/gval v1.0.0 h1:GEKnRwkWDdf9dOmKcNrar9EA1bz1z9DqPIO1+iLzhd8=
+github.com/PaesslerAG/gval v1.0.0/go.mod h1:y/nm5yEyTeX6av0OfKJNp9rBNj2XrGhAf5+v24IBN1I=
+github.com/PaesslerAG/gval v1.0.1 h1:QnCvok0w0Y3uZNxmNmC6GZ0cuBl+jH0tu/rBMT8pso4=
+github.com/PaesslerAG/gval v1.0.1/go.mod h1:y/nm5yEyTeX6av0OfKJNp9rBNj2XrGhAf5+v24IBN1I=
+github.com/PaesslerAG/jsonpath v0.1.0/go.mod h1:4BzmtoM/PI8fPO4aQGIusjGxGir2BzcV0grWtFzq1Y8=
+github.com/PaesslerAG/jsonpath v0.1.1 h1:c1/AToHQMVsduPAa4Vh6xp2U0evy4t8SWp8imEsylIk=
+github.com/PaesslerAG/jsonpath v0.1.1/go.mod h1:lVboNxFGal/VwW6d9JzIy56bUsYAP6tH/x80vjnCseY=
 github.com/alecthomas/kingpin v1.3.8-0.20191202215629-0ce3bba646ba h1:RgaHYGQoSwiMAgn0tXwcaieX1kaOQrPC0NX1OD8rZgk=
 github.com/alecthomas/kingpin v1.3.8-0.20191202215629-0ce3bba646ba/go.mod h1:b6br6/pDFSfMkBgC96TbpOji05q5pa+v5rIlS0Y6XtI=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -16,6 +23,8 @@ github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d h1:Io4Ts9W/92wkP9VKQ
 github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d/go.mod h1:PSWm5RA4GUQ+cyCXiBIIUjlDWdJci5cU3GVKwaQRmW8=
 github.com/kenshaw/transrpc v0.0.0-20191213145034-14ffaf01116f h1:fN5GV3BKYZOU2f0MoqbzC7H6YR1gm4KhK6tJtlkgolU=
 github.com/kenshaw/transrpc v0.0.0-20191213145034-14ffaf01116f/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
+github.com/kenshaw/transrpc v0.0.0-20191215032229-57d3b98873f3 h1:5PtR/JEyxIcyZNXgG3qNnJPR5RV3V+2Jr+kjyy7anEo=
+github.com/kenshaw/transrpc v0.0.0-20191215032229-57d3b98873f3/go.mod h1:TSarvFpALOmzaefbbzR8bS+IVo1KkPdyeQssmYJfTM4=
 github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0 h1:n7acF4Froqc0W/eMlbqyWtG7k6WccLYLVguoX+CazAU=
 github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0/go.mod h1:EcJhteMzugzx8suTFN/D++EzL5/2OYjOdvb6yWV5+rw=
 github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687 h1:ZrOZbqW7T2EgLd4soRATeSZrP3ijy2CgNFXG44cUuS8=
@@ -38,3 +47,5 @@ gopkg.in/yaml.v2 v2.2.7 h1:VUgggvou5XRW9mHwD/yXxIYSMtY0zoKQf/v226p2nyo=
 gopkg.in/yaml.v2 v2.2.7/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2 h1:XZx7nhd5GMaZpmDaEHFVafUZC7ya0fuo7cSJ3UCKYmM=
 gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+k8s.io/client-go v11.0.0+incompatible h1:LBbX2+lOwY9flffWlJM7f1Ct8V2SRNiMRDFeiwnJo9o=
+k8s.io/client-go v11.0.0+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=

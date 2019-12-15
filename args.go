@@ -8,14 +8,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/gobwas/glob"
 	"github.com/jdxcode/netrc"
 	"github.com/kenshaw/transrpc"
 	"github.com/knq/ini"
@@ -70,11 +67,8 @@ type Args struct {
 		// Recent is the recent toggle.
 		Recent bool
 
-		// MatchOrder is torrent identifier match order.
-		MatchOrder []string
-
-		// MatchOrderWasSet is the match order was set toggle.
-		MatchOrderWasSet bool
+		// Filter is the torrent filter.
+		Filter string
 	}
 
 	// Output contains the global output configuration.
@@ -99,6 +93,18 @@ type Args struct {
 
 		// NoTotals is the toggle to disable the total line on table output.
 		NoTotals bool
+
+		// ColumnNames is the column name map.
+		ColumnNames map[string]string
+
+		// SortBy is the column to sort by.
+		SortBy string
+
+		// SortByWasSet is the sort by set toggle.
+		SortByWasSet bool
+
+		// SortOrder ist he sort by order.
+		SortOrder string
 	}
 
 	// ConfigParams are the config params.
@@ -188,6 +194,7 @@ func NewArgs() (*Args, string, error) {
 	// create args
 	args := &Args{}
 	args.AddParams.Cookies = make(map[string]string)
+	args.Output.ColumnNames = make(map[string]string)
 
 	// global options
 	kingpin.Flag("verbose", "toggle verbose").Short('v').Default("false").BoolVar(&args.Verbose)
@@ -213,11 +220,18 @@ func NewArgs() (*Args, string, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-	addCmd.Flag("output", "output format (default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
+
+	addCmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
 	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 	addCmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
 	addCmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
+	addCmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
+		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash",
+	).StringMapVar(&args.Output.ColumnNames)
+	addCmd.Flag("sort-by", "sort output by column").PlaceHolder("<column>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	addCmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<dir>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
+
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
@@ -269,15 +283,22 @@ func NewArgs() (*Args, string, error) {
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.Filter.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Filter.Recent)
-		cmd.Flag("match-order", "match order (default: hash,id,glob)").Short('m').PlaceHolder("<m>,<m>").Default("hash", "id", "glob").EnumsVar(&args.Filter.MatchOrder, "hash", "id", "glob", "regexp")
+		cmd.Flag("filter", "torrent filter").Short('F').PlaceHolder("<filter>").Default(
+			"",
+		).StringVar(&args.Filter.Filter)
 
 		switch commands[i] {
 		case "get", "files get", "trackers get":
-			cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).EnumVar(&args.Output.Output, "table", "wide", "json", "yaml", "flat")
+			cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
 			cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 			cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 			cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
 			cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
+			cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
+				"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash",
+			).StringMapVar(&args.Output.ColumnNames)
+			cmd.Flag("sort-by", "sort output by column").PlaceHolder("<column>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+			cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<dir>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
 
 		case "set":
 			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
@@ -371,12 +392,6 @@ func (args *Args) loadConfig(cmd string) error {
 	// change flags from config file, if not set by command line flags
 	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.output"))); v != "" && !args.Output.OutputWasSet {
 		args.Output.Output = v
-	}
-	if v := args.getContextKey("match-order"); v != "" && !args.Filter.MatchOrderWasSet {
-		args.Filter.MatchOrder = strings.Split(v, ",")
-		for i := 0; i < len(args.Filter.MatchOrder); i++ {
-			args.Filter.MatchOrder[i] = strings.ToLower(strings.TrimSpace(args.Filter.MatchOrder[i]))
-		}
 	}
 	if v := strings.ToLower(strings.TrimSpace(args.Config.GetKey("default.si"))); v != "" && !args.Output.SIWasSet {
 		args.Output.SI = v == "true" || v == "1"
@@ -585,30 +600,7 @@ func (args *Args) findTorrents() (*transrpc.Client, []transrpc.Torrent, error) {
 	} else {
 		for _, t := range res.Torrents {
 			for _, id := range args.Args {
-				g, gerr := glob.Compile(id)
-				re, reerr := regexp.Compile(id)
-				for _, m := range args.Filter.MatchOrder {
-					switch m {
-					case "id":
-						if id == strconv.FormatInt(t.ID, 10) {
-							torrents = append(torrents, t)
-						}
-					case "hash":
-						if len(id) >= minimumHashCompareLen && strings.HasPrefix(t.HashString, id) {
-							torrents = append(torrents, t)
-						}
-					case "glob":
-						if gerr == nil && g.Match(t.Name) {
-							torrents = append(torrents, t)
-						}
-					case "regexp":
-						if reerr == nil && re.MatchString(t.Name) {
-							torrents = append(torrents, t)
-						}
-					default:
-						return nil, nil, ErrInvalidMatchOrder
-					}
-				}
+				t, id = t, id
 			}
 		}
 	}
