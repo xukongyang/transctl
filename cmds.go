@@ -72,10 +72,10 @@ func doAdd(args *Args) error {
 		isMagnet := magnetRE.MatchString(v)
 		fi, err := os.Stat(v)
 		switch {
+		case err != nil && isMagnet:
+			req.Filename = v
 		case err != nil && os.IsNotExist(err) && !isMagnet:
 			return fmt.Errorf("file not found: %s", v)
-		case err != nil && os.IsNotExist(err) && isMagnet:
-			req.Filename = v
 		case err != nil:
 			return err
 		case err == nil && fi.IsDir():
