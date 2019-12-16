@@ -350,6 +350,23 @@ func NewArgs() (*Args, string, error) {
 	return args, cmd, nil
 }
 
+// addOutputFlags adds output flags to the cmd.
+func (args *Args) addOutputFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
+	cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
+	cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
+	cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
+	cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
+	cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
+		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
+	).StringMapVar(&args.Output.ColumnNames)
+	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<order>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
+	cmd.Flag("order", "sort output order (asc, desc; default: asc)").Hidden().PlaceHolder("<order>").EnumVar(&args.Output.SortOrder, "asc", "desc")
+}
+
 // loadConfig loads the configuration file from disk.
 func (args *Args) loadConfig(cmd string) error {
 	// check if config file exists, create if not
@@ -406,7 +423,7 @@ func (args *Args) loadConfig(cmd string) error {
 			return ErrMustSpecifyListOrOptionName
 		}
 
-	// check exactly one of --recent, --all, or len(args.Args) > 0 conditions
+	// check exactly one of --list, --recent, --filter, or len(args.Args) > 0 conditions
 	case "get", "set", "start", "stop", "move", "remove", "verify", "reannounce",
 		"peers get", "files get", "files set-priority", "files set-location",
 		"trackers get", "trackers add", "trackers replace", "trackers remove",
@@ -562,21 +579,4 @@ func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) 
 		s = strings.TrimSuffix(fmt.Sprintf(s, v...), "\n")
 		fmt.Fprintln(w, prefix+strings.Replace(s, "\n", "\n"+prefix, -1)+"\n")
 	}
-}
-
-// addOutputFlags adds output flags to the cmd.
-func (args *Args) addOutputFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
-	cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
-	cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
-	cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
-	cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
-	cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
-		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
-	).StringMapVar(&args.Output.ColumnNames)
-	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	cmd.Flag("by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<order>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
-	cmd.Flag("order", "sort output order (asc, desc; default: asc)").Hidden().PlaceHolder("<order>").EnumVar(&args.Output.SortOrder, "asc", "desc")
 }
