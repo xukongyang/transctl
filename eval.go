@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -18,6 +19,7 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 	}
 
 	var req *transrpc.TorrentGetRequest
+	var fields map[string][]string
 	switch {
 	case args.Filter.Recent:
 		req = transrpc.TorrentGet(transrpc.RecentlyActive).WithFields("hashString")
@@ -25,10 +27,15 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 		req = transrpc.TorrentGet().WithFields("hashString")
 	case args.Filter.Filter != "":
 		// evaluate filter expression to build field names
-		fieldnames, err := extractVars(args)
+		fields, err = extractVars(args)
 		if err != nil {
 			return nil, nil, err
 		}
+		var fieldnames []string
+		for k := range fields {
+			fieldnames = append(fieldnames, k)
+		}
+		sort.Strings(fieldnames)
 		req = transrpc.TorrentGet().WithFields(fieldnames...)
 	default:
 		return nil, nil, ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent
@@ -47,7 +54,7 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 	// filter torrents
 	var torrents []transrpc.Torrent
 	for _, t := range res.Torrents {
-		m := buildJSONMap(t)
+		m := buildJSONMap(t, fields)
 		if len(args.Args) == 0 {
 			torrents, err = appendMatch(torrents, args, t, m, l)
 			if err != nil {
@@ -67,7 +74,85 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 	return cl, torrents, nil
 }
 
-// appendMatch
+// extractVars extracts the var names from the provided expression against thing.
+func extractVars(args *Args) (map[string][]string, error) {
+	keys := map[string]bool{"hashString": true}
+	_, err := gval.Evaluate(
+		args.Filter.Filter,
+		map[string]interface{}{},
+		buildQueryLanguage(),
+		gval.VariableSelector(func(path gval.Evaluables) gval.Evaluable {
+			return func(ctx context.Context, v interface{}) (interface{}, error) {
+				k, err := path.EvalStrings(ctx, v)
+				if err != nil {
+					return nil, err
+				}
+				key := strings.Join(k, ".")
+				if key != "identifier" {
+					keys[key] = true
+				}
+				return key, nil
+			}
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// build column mappings
+	inverseCols := make(map[string]string, len(args.Output.ColumnNames))
+	for k, v := range args.Output.ColumnNames {
+		inverseCols[v] = k
+	}
+	m := make(map[string][]string)
+	for k := range keys {
+		v := k
+		if c, ok := inverseCols[k]; ok {
+			k = c
+		}
+		m[k] = append(m[k], v)
+	}
+	return m, nil
+}
+
+// buildJSONMap builds a JSON map.
+func buildJSONMap(v interface{}, fields map[string][]string) map[string]interface{} {
+	res := map[string]interface{}{}
+	if v == nil {
+		return res
+	}
+	typ := reflect.TypeOf(v)
+	indirect := reflect.Indirect(reflect.ValueOf(v))
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	for i := 0; i < typ.NumField(); i++ {
+		tag := strings.TrimSpace(strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)[0])
+		if tag == "" || tag == "-" {
+			continue
+		}
+		cols, ok := fields[tag]
+		if !ok {
+			continue
+		}
+		var y interface{}
+		f := indirect.Field(i).Interface()
+		switch typ.Field(i).Type.Kind() {
+		case reflect.Struct:
+			y = buildJSONMap(f, fields)
+		case reflect.Slice:
+		default:
+			y = f
+		}
+		for _, col := range cols {
+			res[col] = y
+		}
+	}
+	return res
+}
+
+// appendMatch appends torrents matching the filter, returning the aggregate
+// slice.
 func appendMatch(torrents []transrpc.Torrent, args *Args, t transrpc.Torrent, m map[string]interface{}, l gval.Language) ([]transrpc.Torrent, error) {
 	match, err := gval.Evaluate(args.Filter.Filter, m, l)
 	if err != nil {
@@ -89,102 +174,71 @@ func buildQueryLanguage() gval.Language {
 		gval.Full(),
 		gval.InfixEvalOperator("%%", globOperator),
 		gval.Precedence("%%", 40),
-		gval.Function("hasPrefix", hasPrefixFunc),
+		gval.InfixEvalOperator("%^", prefixOperator),
+		gval.Precedence("%^", 40),
 	)
 }
 
 // globOperator is the glob operator implementation.
 func globOperator(a, b gval.Evaluable) (gval.Evaluable, error) {
 	if !b.IsConst() {
-		return func(c context.Context, o interface{}) (interface{}, error) {
-			a, err := a.EvalString(c, o)
+		return func(ctx context.Context, o interface{}) (interface{}, error) {
+			astr, err := a.EvalString(ctx, o)
 			if err != nil {
 				return nil, err
 			}
-			b, err := b.EvalString(c, o)
+			bstr, err := b.EvalString(ctx, o)
 			if err != nil {
 				return nil, err
 			}
-			g, err := glob.Compile(b)
+			g, err := glob.Compile(bstr)
 			if err != nil {
 				return nil, err
 			}
-			return g.Match(a), nil
+			return g.Match(astr), nil
 		}, nil
 	}
-	s, err := b.EvalString(nil, nil)
+	bstr, err := b.EvalString(context.TODO(), nil)
 	if err != nil {
 		return nil, err
 	}
-	g, err := glob.Compile(s)
+	g, err := glob.Compile(bstr)
 	if err != nil {
 		return nil, err
 	}
-	return func(c context.Context, v interface{}) (interface{}, error) {
-		s, err := a.EvalString(c, v)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		astr, err := a.EvalString(ctx, v)
 		if err != nil {
 			return nil, err
 		}
-		return g.Match(s), nil
+		return g.Match(astr), nil
 	}, nil
 }
 
-// hasPrefixFunc is the hasPrefix function implementation.
-func hasPrefixFunc(args ...interface{}) (interface{}, error) {
-	if len(args) != 2 {
-		return nil, ErrHasPrefixTakesExactlyTwoArguments
-	}
-	a, ok := args[0].(string)
-	if !ok {
-		return nil, ErrSMustBeAString
-	}
-	b, ok := args[1].(string)
-	if !ok {
-		return nil, ErrPrefixMustBeAString
-	}
-	if len(b) < minimumHashCompareLen {
-		return false, nil
-	}
-	return strings.HasPrefix(strings.ToLower(a), strings.ToLower(b)), nil
-}
-
-// extractVars extracts the var names from the provided expression against thing.
-func extractVars(args *Args) ([]string, error) {
-	// build column mappings
-	inverseCols := make(map[string]string, len(args.Output.ColumnNames))
-	for k, v := range args.Output.ColumnNames {
-		inverseCols[v] = k
-	}
-
-	keys := map[string]bool{"hashString": true}
-	_, err := gval.Evaluate(
-		args.Filter.Filter,
-		map[string]interface{}{},
-		buildQueryLanguage(),
-		gval.VariableSelector(func(path gval.Evaluables) gval.Evaluable {
-			return func(c context.Context, v interface{}) (interface{}, error) {
-				k, err := path.EvalStrings(c, v)
-				if err != nil {
-					return nil, err
-				}
-				key := strings.Join(k, ".")
-				if key != "identifier" {
-					keys[key] = true
-				}
-				return key, nil
+// prefixOperator is the glob operator implementation.
+func prefixOperator(a, b gval.Evaluable) (gval.Evaluable, error) {
+	if !b.IsConst() {
+		return func(ctx context.Context, o interface{}) (interface{}, error) {
+			astr, err := a.EvalString(ctx, o)
+			if err != nil {
+				return nil, err
 			}
-		}),
-	)
+			bstr, err := b.EvalString(ctx, o)
+			if err != nil {
+				return nil, err
+			}
+			return strings.HasPrefix(strings.ToLower(astr), strings.ToLower(bstr)), nil
+		}, nil
+	}
+	bstr, err := b.EvalString(context.TODO(), nil)
 	if err != nil {
 		return nil, err
 	}
-	var ret []string
-	for k := range keys {
-		if c, ok := inverseCols[k]; ok {
-			k = c
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		astr, err := a.EvalString(ctx, v)
+		if err != nil {
+			return nil, err
 		}
-		ret = append(ret, k)
-	}
-	sort.Strings(ret)
-	return ret, nil
+		return strings.HasPrefix(astr, bstr), nil
+	}, nil
 }

@@ -251,34 +251,6 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 	}
 }
 
-// buildJSONMap builds a JSON map.
-func buildJSONMap(v interface{}) map[string]interface{} {
-	res := map[string]interface{}{}
-	if v == nil {
-		return res
-	}
-	typ := reflect.TypeOf(v)
-	indirect := reflect.Indirect(reflect.ValueOf(v))
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
-	for i := 0; i < typ.NumField(); i++ {
-		tag := strings.TrimSpace(strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)[0])
-		if tag == "" || tag == "-" {
-			continue
-		}
-		f := indirect.Field(i).Interface()
-		switch typ.Field(i).Type.Kind() {
-		case reflect.Struct:
-			res[tag] = buildJSONMap(f)
-		case reflect.Slice:
-		default:
-			res[tag] = f
-		}
-	}
-	return res
-}
-
 // executor interface is the common interface for settable requests.
 type executor interface {
 	Do(context.Context, *transrpc.Client) error
