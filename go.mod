@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/PaesslerAG/gval v1.0.1
-	github.com/PaesslerAG/jsonpath v0.1.1
+	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
 	github.com/alecthomas/kingpin v1.3.8-0.20191202215629-0ce3bba646ba
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect

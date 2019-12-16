@@ -85,6 +85,18 @@ const (
 
 	// ErrMustSpecifyAtLeastOneOutputColumn is the must specify at least one output column error.
 	ErrMustSpecifyAtLeastOneOutputColumn Error = "must specify at least one output column"
+
+	// ErrHasPrefixTakesExactlyTwoArguments is the hasPrefix takes exactly two arguments error.
+	ErrHasPrefixTakesExactlyTwoArguments Error = "hasPrefix takes exactly two arguments"
+
+	// ErrSMustBeAString is the s must be a string error.
+	ErrSMustBeAString Error = "s must be a string"
+
+	// ErrPrefixMustBeAString is the prefix must be a string error.
+	ErrPrefixMustBeAString Error = "prefix must be a string"
+
+	// ErrFilterMustReturnBool is the filter must return bool error.
+	ErrFilterMustReturnBool Error = "filter must return bool"
 )
 
 // TorrentResult is a wrapper type for slice of *transrpc.Torrent's that
@@ -151,7 +163,7 @@ func (tr *TorrentResult) Encode(w io.Writer, args *Args, cl *transrpc.Client) er
 		}
 		f = tr.encodeTable(cols...)
 	case "wide":
-		f = tr.encodeTable("id", "name", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "addedDate", "downloadDir", "shortHash")
+		f = tr.encodeTable("id", "name", "peersConnected", "downloadDir", "addedDate", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash")
 	case "json":
 		f = tr.encodeJSON
 	case "yaml":
@@ -297,9 +309,9 @@ func (tr *TorrentResult) encodeTable(columns ...string) func(io.Writer, *Args, *
 				return x < b.Interface().(transrpc.Duration)
 			case transrpc.Time:
 				if args.Output.SortOrder == "desc" {
-					return time.Time(x).After(b.Interface().(time.Time))
+					return time.Time(x).After(time.Time(b.Interface().(transrpc.Time)))
 				}
-				return time.Time(x).Before(b.Interface().(time.Time))
+				return time.Time(x).Before(time.Time(b.Interface().(transrpc.Time)))
 			case transrpc.Bool:
 				return false
 			default:
@@ -601,6 +613,34 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 			panic(fmt.Sprintf("unknown type: %d // %v", i, f))
 		}
 	}
+}
+
+// buildJSONMap builds a JSON map.
+func buildJSONMap(v interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+	if v == nil {
+		return res
+	}
+	typ := reflect.TypeOf(v)
+	indirect := reflect.Indirect(reflect.ValueOf(v))
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	for i := 0; i < typ.NumField(); i++ {
+		tag := strings.TrimSpace(strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)[0])
+		if tag == "" || tag == "-" {
+			continue
+		}
+		f := indirect.Field(i).Interface()
+		switch typ.Field(i).Type.Kind() {
+		case reflect.Struct:
+			res[tag] = buildJSONMap(f)
+		case reflect.Slice:
+		default:
+			res[tag] = f
+		}
+	}
+	return res
 }
 
 // executor interface is the common interface for settable requests.

@@ -68,6 +68,9 @@ type Args struct {
 
 		// Filter is the torrent filter.
 		Filter string
+
+		// FilterWasSet is the filter set toggle.
+		FilterWasSet bool
 	}
 
 	// Output contains the global output configuration.
@@ -226,7 +229,7 @@ func NewArgs() (*Args, string, error) {
 	addCmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
 	addCmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
 	addCmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
-		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash",
+		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
 	).StringMapVar(&args.Output.ColumnNames)
 	addCmd.Flag("sort-by", "sort output by column").PlaceHolder("<column>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
 	addCmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<dir>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
@@ -283,8 +286,8 @@ func NewArgs() (*Args, string, error) {
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Filter.Recent)
 		cmd.Flag("filter", "torrent filter").Short('F').PlaceHolder("<filter>").Default(
-			"",
-		).StringVar(&args.Filter.Filter)
+			`id == identifier || name %% identifier || hasPrefix(hashString, identifier)`,
+		).IsSetByUser(&args.Filter.FilterWasSet).StringVar(&args.Filter.Filter)
 
 		switch commands[i] {
 		case "get", "files get", "trackers get":
@@ -294,7 +297,7 @@ func NewArgs() (*Args, string, error) {
 			cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
 			cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
 			cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
-				"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash",
+				"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
 			).StringMapVar(&args.Output.ColumnNames)
 			cmd.Flag("sort-by", "sort output by column").PlaceHolder("<column>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
 			cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<dir>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
@@ -431,7 +434,9 @@ func (args *Args) loadConfig(cmd string) error {
 		case args.Filter.ListAll && args.Filter.Recent,
 			args.Filter.ListAll && len(args.Args) != 0,
 			args.Filter.Recent && len(args.Args) != 0,
-			!args.Filter.ListAll && !args.Filter.Recent && len(args.Args) == 0:
+			args.Filter.ListAll && args.Filter.FilterWasSet,
+			args.Filter.Recent && args.Filter.FilterWasSet,
+			!args.Filter.ListAll && !args.Filter.Recent && !args.Filter.FilterWasSet && len(args.Args) == 0:
 			return ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent
 		}
 
