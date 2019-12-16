@@ -479,8 +479,19 @@ func TorrentSet(ids ...interface{}) *TorrentSetRequest {
 
 // Do executes the torrent set request using the provided context and client.
 func (req *TorrentSetRequest) Do(ctx context.Context, cl *Client) error {
-	params := make(map[string]interface{})
+	if len(req.changed) == 0 {
+		return nil
+	}
 
+	ids, err := checkIdentifierList(req.IDs...)
+	if err != nil {
+		return err
+	}
+
+	// build params
+	params := map[string]interface{}{
+		"ids": ids,
+	}
 	if req.changed["BandwidthPriority"] {
 		params["bandwidthPriority"] = req.BandwidthPriority
 	}
@@ -498,9 +509,6 @@ func (req *TorrentSetRequest) Do(ctx context.Context, cl *Client) error {
 	}
 	if req.changed["HonorsSessionLimits"] {
 		params["honorsSessionLimits"] = req.HonorsSessionLimits
-	}
-	if req.changed["IDs"] {
-		params["ids"] = req.IDs
 	}
 	if req.changed["Labels"] {
 		params["labels"] = req.Labels
@@ -549,19 +557,6 @@ func (req *TorrentSetRequest) Do(ctx context.Context, cl *Client) error {
 	}
 	if req.changed["UploadLimited"] {
 		params["uploadLimited"] = req.UploadLimited
-	}
-
-	// check identifiers
-	if v, ok := params["ids"]; ok {
-		ids, err := checkIdentifierList(v.([]interface{})...)
-		if err != nil {
-			return err
-		}
-		if ids != nil {
-			params["ids"] = ids
-		} else {
-			delete(params, "ids")
-		}
 	}
 
 	return cl.Do(ctx, "torrent-set", params, nil)
