@@ -276,7 +276,7 @@ func NewArgs() (*Args, string, error) {
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Filter.Recent)
 		cmd.Flag("filter", "torrent filter").Short('F').PlaceHolder("<filter>").Default(
-			`id == identifier || name %% identifier || hashString %^ identifier`,
+			`id == identifier || name %% identifier || (strlen(identifier) >= 5 && hashString %^ identifier)`,
 		).IsSetByUser(&args.Filter.FilterWasSet).StringVar(&args.Filter.Filter)
 
 		switch commands[i] {

@@ -176,10 +176,11 @@ func buildQueryLanguage() gval.Language {
 		gval.Precedence("%%", 40),
 		gval.InfixEvalOperator("%^", prefixOperator),
 		gval.Precedence("%^", 40),
+		gval.Function("strlen", strlenFunc),
 	)
 }
 
-// globOperator is the glob operator implementation.
+// globOperator is the gval glob operator.
 func globOperator(a, b gval.Evaluable) (gval.Evaluable, error) {
 	if !b.IsConst() {
 		return func(ctx context.Context, o interface{}) (interface{}, error) {
@@ -215,7 +216,7 @@ func globOperator(a, b gval.Evaluable) (gval.Evaluable, error) {
 	}, nil
 }
 
-// prefixOperator is the glob operator implementation.
+// prefixOperator is the gval string prefix operator.
 func prefixOperator(a, b gval.Evaluable) (gval.Evaluable, error) {
 	if !b.IsConst() {
 		return func(ctx context.Context, o interface{}) (interface{}, error) {
@@ -241,4 +242,16 @@ func prefixOperator(a, b gval.Evaluable) (gval.Evaluable, error) {
 		}
 		return strings.HasPrefix(astr, bstr), nil
 	}, nil
+}
+
+// strlenFunc is the gval strlen function.
+func strlenFunc(args ...interface{}) (interface{}, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidStrlenArguments
+	}
+	s, ok := args[0].(string)
+	if !ok {
+		return nil, ErrInvalidStrlenArguments
+	}
+	return (float64)(len(s)), nil
 }

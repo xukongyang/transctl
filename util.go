@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	minimumHashCompareLen = 5
-	defaultConfig         = `[default]
+	defaultConfig = `[default]
 	output=table
 `
 )
@@ -81,17 +80,11 @@ const (
 	// ErrMustSpecifyAtLeastOneOutputColumn is the must specify at least one output column error.
 	ErrMustSpecifyAtLeastOneOutputColumn Error = "must specify at least one output column"
 
-	// ErrHasPrefixTakesExactlyTwoArguments is the hasPrefix takes exactly two arguments error.
-	ErrHasPrefixTakesExactlyTwoArguments Error = "hasPrefix takes exactly two arguments"
-
-	// ErrSMustBeAString is the s must be a string error.
-	ErrSMustBeAString Error = "s must be a string"
-
-	// ErrPrefixMustBeAString is the prefix must be a string error.
-	ErrPrefixMustBeAString Error = "prefix must be a string"
-
 	// ErrFilterMustReturnBool is the filter must return bool error.
 	ErrFilterMustReturnBool Error = "filter must return bool"
+
+	// ErrInvalidStrlenArguments is the invalid strlen arguments error.
+	ErrInvalidStrlenArguments Error = "invalid strlen() arguments"
 )
 
 // ConfigStore is the interface for config stores.
