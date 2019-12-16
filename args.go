@@ -148,11 +148,6 @@ type Args struct {
 		Priority string
 	}
 
-	// FilesSetLocationParams are the files set-location params.
-	FilesSetLocationParams struct {
-		Location string
-	}
-
 	// TrackersReplacePramas are the trackers replace params.
 	TrackersReplaceParams struct {
 		Replace string
@@ -170,6 +165,8 @@ type Args struct {
 	// Config is the loaded settings from the config file.
 	Config *ini.File
 }
+
+var tableCols = []string{"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers"}
 
 // NewArgs creates the command args.
 func NewArgs() (*Args, string, error) {
@@ -222,8 +219,7 @@ func NewArgs() (*Args, string, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-	args.addOutputFlags(addCmd)
-
+	args.addOutputFlags(addCmd, "id", tableCols...)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
@@ -248,8 +244,9 @@ func NewArgs() (*Args, string, error) {
 		"queue down", "Move torrents down in queue",
 		"peers get", "Get information about peers",
 		"files get", "Get information about files",
-		"files set-priority", "Set priority for torrent files",
-		"files set-location", "Set location for torrent files",
+		"files set-priority", "Set torrent files' priority",
+		"files set-wanted", "Set torrent files as wanted",
+		"files set-unwanted", "Set torrent files as unwanted",
 		"trackers get", "Get information about trackers",
 		"trackers add", "Add tracker to torrents",
 		"trackers replace", "Replace tracker for torrents",
@@ -280,8 +277,8 @@ func NewArgs() (*Args, string, error) {
 		).IsSetByUser(&args.Filter.FilterWasSet).StringVar(&args.Filter.Filter)
 
 		switch commands[i] {
-		case "get", "files get", "trackers get":
-			args.addOutputFlags(cmd)
+		case "get":
+			args.addOutputFlags(cmd, "id", tableCols...)
 
 		case "set":
 			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
@@ -296,13 +293,21 @@ func NewArgs() (*Args, string, error) {
 		case "remove":
 			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
 
+		case "peers get":
+			args.addOutputFlags(cmd, "address", "clientName=client", "rateToClient=down", "rateToPeer=up", "progress=%", "shortHash=hash")
+
+		case "files get":
+			args.addOutputFlags(cmd, "name")
+
 		case "files set-priority":
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
 			cmd.Arg("priority", "file priority (low, normal, high)").Required().EnumVar(&args.FilesSetPriorityParams.Priority, "low", "normal", "high")
 
-		case "files set-location":
+		case "files set-wanted", "files set-unwanted":
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
-			cmd.Arg("location", "file location").Required().StringVar(&args.FilesSetLocationParams.Location)
+
+		case "trackers get":
+			args.addOutputFlags(cmd, "announce")
 
 		case "trackers add", "trackers remove":
 			cmd.Arg("tracker", "tracker url").Required().StringVar(&args.Tracker)
@@ -351,18 +356,16 @@ func NewArgs() (*Args, string, error) {
 }
 
 // addOutputFlags adds output flags to the cmd.
-func (args *Args) addOutputFlags(cmd *kingpin.CmdClause) {
+func (args *Args) addOutputFlags(cmd *kingpin.CmdClause, sortBy string, columnNames ...string) {
 	cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
 	cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 	cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 	cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
 	cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
-	cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
-		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
-	).StringMapVar(&args.Output.ColumnNames)
-	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	cmd.Flag("by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(columnNames...).StringMapVar(&args.Output.ColumnNames)
+	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default(sortBy).IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("by", "sort output order by column").Hidden().PlaceHolder("<sort>").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
 	cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<order>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
 	cmd.Flag("order", "sort output order (asc, desc; default: asc)").Hidden().PlaceHolder("<order>").EnumVar(&args.Output.SortOrder, "asc", "desc")
 }
@@ -425,7 +428,7 @@ func (args *Args) loadConfig(cmd string) error {
 
 	// check exactly one of --list, --recent, --filter, or len(args.Args) > 0 conditions
 	case "get", "set", "start", "stop", "move", "remove", "verify", "reannounce",
-		"peers get", "files get", "files set-priority", "files set-location",
+		"peers get", "files get", "files set-priority", "files set-wanted", "files set-unwanted",
 		"trackers get", "trackers add", "trackers replace", "trackers remove",
 		"queue top", "queue bottom", "queue up", "queue down":
 		switch {
@@ -579,4 +582,19 @@ func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) 
 		s = strings.TrimSuffix(fmt.Sprintf(s, v...), "\n")
 		fmt.Fprintln(w, prefix+strings.Replace(s, "\n", "\n"+prefix, -1)+"\n")
 	}
+}
+
+// formatByteCount formats a byte count for display.
+func (args *Args) formatByteCount(x transrpc.ByteCount, hasSuffix bool) string {
+	suffix, prec := "", 2
+	if hasSuffix {
+		suffix = "/s"
+	}
+	if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
+		if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
+			prec = 0
+		}
+		return x.Format(!args.Output.SI, prec, suffix)
+	}
+	return fmt.Sprintf("%d%s", x, suffix)
 }

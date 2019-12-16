@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gobwas/glob"
 	"github.com/kenshaw/transrpc"
 )
 
@@ -181,21 +183,91 @@ func doRemove(args *Args) error {
 
 // doPeersGet is the high-level entry point for 'peers get'.
 func doPeersGet(args *Args) error {
-	return nil
+	cl, torrents, err := findTorrents(args)
+	if err != nil {
+		return err
+	}
+	if len(torrents) == 0 {
+		return nil
+	}
+	res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "peers").Do(context.Background(), cl)
+	if err != nil {
+		return err
+	}
+	return NewPeerResult(res.Torrents).Encode(os.Stdout, args, cl)
 }
 
 // doFilesGet is the high-level entry point for 'files get'.
 func doFilesGet(args *Args) error {
-	return nil
+	cl, torrents, err := findTorrents(args)
+	if err != nil {
+		return err
+	}
+	if len(torrents) == 0 {
+		return nil
+	}
+	res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files").Do(context.Background(), cl)
+	if err != nil {
+		return err
+	}
+	return NewFileResult(res.Torrents).Encode(os.Stdout, args, cl)
+}
+
+// doTorrentSet generates a torrent set request to change the specified field.
+func doFilesSet(field string) func(args *Args) error {
+	var errmsg string
+	switch {
+	case strings.HasPrefix(field, "Files"):
+		errmsg = "files set-" + strings.ToLower(strings.TrimPrefix(field, "Files"))
+	case strings.HasPrefix(field, "Priority"):
+		errmsg = "files set-priority " + strings.ToLower(strings.TrimPrefix(field, "Priority"))
+	}
+	return func(args *Args) error {
+		g, err := glob.Compile(args.FileMask)
+		log.Printf(">>> filemask: %q", args.FileMask)
+		if err != nil {
+			return err
+		}
+		cl, torrents, err := findTorrents(args)
+		if err != nil {
+			return err
+		}
+		if len(torrents) == 0 {
+			return nil
+		}
+
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files").Do(context.Background(), cl)
+		if err != nil {
+			return nil
+		}
+
+		for _, t := range res.Torrents {
+			var files []string
+			for i := 0; i < len(t.Files); i++ {
+				if g.Match(t.Files[i].Name) {
+					files = append(files, strconv.Itoa(i))
+				}
+			}
+			if len(files) != 0 {
+				if err = doWithAndExecute(cl, transrpc.TorrentSet(t.HashString), errmsg, field, strings.Join(files, ",")); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
 }
 
 // doFilesSetPriority is the high-level entry point for 'files set-priority'.
 func doFilesSetPriority(args *Args) error {
-	return nil
-}
-
-// doFilesSetLocation is the high-level entry point for 'files set-location'.
-func doFilesSetLocation(args *Args) error {
+	switch args.FilesSetPriorityParams.Priority {
+	case "low":
+		return doFilesSet("PriorityLow")(args)
+	case "normal":
+		return doFilesSet("PriorityNormal")(args)
+	case "high":
+		return doFilesSet("PriorityHigh")(args)
+	}
 	return nil
 }
 
