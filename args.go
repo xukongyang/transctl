@@ -222,17 +222,7 @@ func NewArgs() (*Args, string, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-
-	addCmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
-	addCmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
-	addCmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
-	addCmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
-	addCmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
-	addCmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
-		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
-	).StringMapVar(&args.Output.ColumnNames)
-	addCmd.Flag("sort-by", "sort output by column").PlaceHolder("<column>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	addCmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<dir>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
+	args.addOutputFlags(addCmd)
 
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
@@ -291,16 +281,7 @@ func NewArgs() (*Args, string, error) {
 
 		switch commands[i] {
 		case "get", "files get", "trackers get":
-			cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
-			cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
-			cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
-			cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
-			cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
-			cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
-				"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
-			).StringMapVar(&args.Output.ColumnNames)
-			cmd.Flag("sort-by", "sort output by column").PlaceHolder("<column>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-			cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<dir>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
+			args.addOutputFlags(cmd)
 
 		case "set":
 			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
@@ -581,4 +562,21 @@ func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) 
 		s = strings.TrimSuffix(fmt.Sprintf(s, v...), "\n")
 		fmt.Fprintln(w, prefix+strings.Replace(s, "\n", "\n"+prefix, -1)+"\n")
 	}
+}
+
+// addOutputFlags adds output flags to the cmd.
+func (args *Args) addOutputFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
+	cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
+	cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
+	cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
+	cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
+	cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(
+		"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers",
+	).StringMapVar(&args.Output.ColumnNames)
+	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("by", "sort output order by column").Hidden().PlaceHolder("<sort>").Default("id").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
+	cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<order>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
+	cmd.Flag("order", "sort output order (asc, desc; default: asc)").Hidden().PlaceHolder("<order>").EnumVar(&args.Output.SortOrder, "asc", "desc")
 }
