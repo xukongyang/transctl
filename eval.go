@@ -142,6 +142,9 @@ func hasPrefixFunc(args ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, ErrPrefixMustBeAString
 	}
+	if len(b) < minimumHashCompareLen {
+		return false, nil
+	}
 	return strings.HasPrefix(strings.ToLower(a), strings.ToLower(b)), nil
 }
 
