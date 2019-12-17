@@ -297,11 +297,11 @@ func NewArgs() (*Args, string, error) {
 			args.addOutputFlags(cmd, "address",
 				"clientName=client", "clientIsChoked=clientChoked", "clientIsInterested=interested", "flagStr=flags",
 				"isDownloadingFrom=downloading", "isEncrypted=encrypted", "isIncoming=incoming", "isUploadingTo=uploading",
-				"isUTP=utp", "peerIsChoked=peerChoked", "progress=%", "rateToClient=down", "rateToPeer=up", "shortHash=hash",
+				"isUTP=utp", "peerIsChoked=peerChoked", "progress=done", "rateToClient=down", "rateToPeer=up", "shortHash=hash",
 			)
 
 		case "files get":
-			args.addOutputFlags(cmd, "name", "bytesCompleted=have", "length=size", "percentDone=%", "shortHash=hash")
+			args.addOutputFlags(cmd, "name", "bytesCompleted=have", "length=size", "percentDone=done", "shortHash=hash")
 
 		case "files set-priority":
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
