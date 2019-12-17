@@ -51,6 +51,9 @@ type Result struct {
 	// flatKey is the flat index key to use.
 	flatKey string
 
+	// flatIndex is the flat index field.
+	flatIndex string
+
 	// columnNames is the column name map.
 	columnNames map[string]string
 
@@ -353,7 +356,7 @@ func (res *Result) encodeFlat(w io.Writer) error {
 	}
 	var last string
 	for i := 0; i < res.res.Len(); i++ {
-		key, err := readFieldOrMethodString(res.res.Index(i), res.index)
+		key, err := readFieldOrMethodString(res.res.Index(i), res.flatIndex)
 		if err != nil {
 			return err
 		}
@@ -448,6 +451,13 @@ func FlatKey(flatKey string) ResultOption {
 	}
 }
 
+// FlatIndex is a result option to set the flat index key.
+func FlatIndex(flatIndex string) ResultOption {
+	return func(res *Result) {
+		res.flatIndex = flatIndex
+	}
+}
+
 // ColumnNames is a result option to set the column names map.
 func ColumnNames(columnNames map[string]string) ResultOption {
 	return func(res *Result) {
@@ -474,6 +484,13 @@ func NoHeaders(noHeaders bool) ResultOption {
 func NoTotals(noTotals bool) ResultOption {
 	return func(res *Result) {
 		res.noTotals = noTotals
+	}
+}
+
+// Index sets the index field to use.
+func Index(index string) ResultOption {
+	return func(res *Result) {
+		res.index = index
 	}
 }
 

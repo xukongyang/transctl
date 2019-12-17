@@ -106,6 +106,7 @@ func doAdd(args *Args) error {
 		TableColumns(defaultTableCols...),
 		WideColumns(defaultWideCols...),
 		FlatName("torrent"),
+		FlatIndex("shortHash"),
 	)...).Encode(os.Stdout); err != nil {
 		return err
 	}
@@ -178,6 +179,7 @@ func doGet(args *Args) error {
 		TableColumns(defaultTableCols...),
 		WideColumns(defaultWideCols...),
 		FlatName("torrent"),
+		FlatIndex("shortHash"),
 	)...).Encode(os.Stdout)
 }
 
@@ -302,6 +304,7 @@ func doPeersGet(args *Args) error {
 		YamlName("peers"),
 		FlatName("peers"),
 		FlatKey("id"),
+		FlatIndex("shortHash"),
 	)...).Encode(os.Stdout)
 }
 
@@ -352,14 +355,13 @@ func doFilesGet(args *Args) error {
 			}
 		}
 	}
-
-	// NAME, SIZE, DONE, %, PRIORITY, HASH
 	return NewResult(result, args.ResultOptions(
 		TableColumns("name", "priority", "bytesCompleted", "percentDone", "shortHash"),
 		WideColumns("name", "priority", "wanted", "bytesCompleted", "length", "percentDone", "id", "shortHash"),
 		YamlName("files"),
 		FlatName("files"),
 		FlatKey("id"),
+		FlatIndex("shortHash"),
 	)...).Encode(os.Stdout)
 }
 
@@ -499,13 +501,13 @@ func doTrackersGet(args *Args) error {
 			}
 		}
 	}
-	// ANNOUNCE, STATUS, UPDATE, PEERS, SEEDS, CONNECTED, HASH
 	return NewResult(result, args.ResultOptions(
 		TableColumns("announce", "lastAnnounceResult", "lastAnnouncePeerCount", "seederCount", "shortHash"),
-		WideColumns("announce", "announceState", "lastAnnounceResult", "lastAnnounceTime", "nextAnnounceTime", "lastAnnouncePeerCount", "seederCount", "shortHash"),
+		WideColumns("announce", "announceState", "lastAnnounceResult", "lastAnnounceTime", "nextAnnounceTime", "lastAnnouncePeerCount", "seederCount", "tier", "shortHash"),
 		YamlName("trackers"),
 		FlatName("trackers"),
 		FlatKey("id"),
+		FlatIndex("shortHash"),
 	)...).Encode(os.Stdout)
 }
 
