@@ -546,7 +546,12 @@ func doTrackersRemove(args *Args) error {
 	if len(torrents) == 0 {
 		return nil
 	}
-	for _, t := range torrents {
+	req := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "trackers")
+	res, err := req.Do(context.Background(), cl)
+	if err != nil {
+		return err
+	}
+	for _, t := range res.Torrents {
 		for _, tracker := range t.Trackers {
 			if tracker.Announce == args.Tracker {
 				if err := transrpc.TorrentSet(t.HashString).WithTrackerRemove([]int64{tracker.ID}).Do(context.Background(), cl); err != nil {
