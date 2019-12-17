@@ -38,6 +38,12 @@ const (
 	// ErrInvalidStatus is the invalid status error.
 	ErrInvalidStatus Error = "invalid status"
 
+	// ErrInvalidMode is the invalid mode error.
+	ErrInvalidMode Error = "invalid mode"
+
+	// ErrInvalidState is the invalid state error.
+	ErrInvalidState Error = "invalid state"
+
 	// ErrInvalidTime is the invalid time error.
 	ErrInvalidTime Error = "invalid time"
 
