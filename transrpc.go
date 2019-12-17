@@ -522,7 +522,7 @@ type TorrentSetRequest struct {
 	SeedRatioMode       Mode          `json:"seedRatioMode,omitempty" yaml:"seedRatioMode,omitempty"`             // which ratio to use.  See tr_ratiolimit
 	TrackerAdd          []string      `json:"trackerAdd,omitempty" yaml:"trackerAdd,omitempty"`                   // strings of announce URLs to add
 	TrackerRemove       []int64       `json:"trackerRemove,omitempty" yaml:"trackerRemove,omitempty"`             // ids of trackers to remove
-	TrackerReplace      []string      `json:"trackerReplace,omitempty" yaml:"trackerReplace,omitempty"`           // pairs of <trackerId/new announce URLs>
+	TrackerReplace      []interface{} `json:"trackerReplace,omitempty" yaml:"trackerReplace,omitempty"`           // pairs of <trackerId/new announce URLs>
 	UploadLimit         int64         `json:"uploadLimit,omitempty" yaml:"uploadLimit,omitempty"`                 // maximum upload speed (KBps)
 	UploadLimited       bool          `json:"uploadLimited,omitempty" yaml:"uploadLimited,omitempty"`             // true if uploadLimit is honored
 }
@@ -737,19 +737,19 @@ func (req TorrentSetRequest) WithSeedRatioMode(seedRatioMode Mode) *TorrentSetRe
 }
 
 // WithTrackerAdd sets strings of announce URLs to add.
-func (req TorrentSetRequest) WithTrackerAdd(trackerAdd []string) *TorrentSetRequest {
+func (req TorrentSetRequest) WithTrackerAdd(trackerAdd ...string) *TorrentSetRequest {
 	req.TrackerAdd = trackerAdd
 	return req.WithChanged("TrackerAdd")
 }
 
 // WithTrackerRemove sets ids of trackers to remove.
-func (req TorrentSetRequest) WithTrackerRemove(trackerRemove []int64) *TorrentSetRequest {
+func (req TorrentSetRequest) WithTrackerRemove(trackerRemove ...int64) *TorrentSetRequest {
 	req.TrackerRemove = trackerRemove
 	return req.WithChanged("TrackerRemove")
 }
 
 // WithTrackerReplace sets pairs of <trackerId/new announce URLs>.
-func (req TorrentSetRequest) WithTrackerReplace(trackerReplace []string) *TorrentSetRequest {
+func (req TorrentSetRequest) WithTrackerReplace(trackerReplace ...interface{}) *TorrentSetRequest {
 	req.TrackerReplace = trackerReplace
 	return req.WithChanged("TrackerReplace")
 }
