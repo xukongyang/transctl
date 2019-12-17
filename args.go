@@ -166,7 +166,7 @@ type Args struct {
 	Config *ini.File
 }
 
-var tableCols = []string{"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers"}
+var torrentColumnNames = []string{"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers"}
 
 // NewArgs creates the command args.
 func NewArgs() (*Args, string, error) {
@@ -219,7 +219,7 @@ func NewArgs() (*Args, string, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-	args.addOutputFlags(addCmd, "id", tableCols...)
+	args.addOutputFlags(addCmd, "id", torrentColumnNames...)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
@@ -278,7 +278,7 @@ func NewArgs() (*Args, string, error) {
 
 		switch commands[i] {
 		case "get":
-			args.addOutputFlags(cmd, "id", tableCols...)
+			args.addOutputFlags(cmd, "id", torrentColumnNames...)
 
 		case "set":
 			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
@@ -295,13 +295,13 @@ func NewArgs() (*Args, string, error) {
 
 		case "peers get":
 			args.addOutputFlags(cmd, "address",
-				"clientName=client", "clientIsChoked=client choked", "clientIsInterested=interested", "flagStr=flags",
+				"clientName=client", "clientIsChoked=clientChoked", "clientIsInterested=interested", "flagStr=flags",
 				"isDownloadingFrom=downloading", "isEncrypted=encrypted", "isIncoming=incoming", "isUploadingTo=uploading",
-				"isUTP=utp", "peerIsChoked=peer choked", "progress=%", "rateToClient=down", "rateToPeer=up", "shortHash=hash",
+				"isUTP=utp", "peerIsChoked=peerChoked", "progress=%", "rateToClient=down", "rateToPeer=up", "shortHash=hash",
 			)
 
 		case "files get":
-			args.addOutputFlags(cmd, "name")
+			args.addOutputFlags(cmd, "name", "bytesCompleted=have", "length=size", "percentDone=%", "shortHash=hash")
 
 		case "files set-priority":
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
@@ -311,7 +311,12 @@ func NewArgs() (*Args, string, error) {
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
 
 		case "trackers get":
-			args.addOutputFlags(cmd, "announce")
+			args.addOutputFlags(cmd, "id",
+				"announceState=state", "downloadCount=downloads", "hasAnnounced=announced", "hasScraped=scraped", "isBackup=backup",
+				"lastAnnouncePeerCount=lastPeerCount", "lastAnnounceResult=lastResult", "lastAnnounceStartTime=lastStartTime",
+				"lastAnnounceSucceeded=lastSucceeded", "lastAnnounceTime=lastTime", "lastAnnounceTimedOut=lastTimedOut",
+				"leecherCount=peers", "nextAnnounceTime=nextAnnounce", "nextScrapeTime=nextScrape", "seederCount=seeds", "shortHash=hash",
+			)
 
 		case "trackers add", "trackers remove":
 			cmd.Arg("tracker", "tracker url").Required().StringVar(&args.Tracker)
@@ -451,6 +456,18 @@ func (args *Args) loadConfig(cmd string) error {
 		if len(args.Args) == 0 {
 			return ErrMustSpecifyAtLeastOneLocation
 		}
+	}
+
+	// check output option is valid
+	switch {
+	case args.Output.Output == "table",
+		args.Output.Output == "wide",
+		args.Output.Output == "json",
+		args.Output.Output == "yaml",
+		args.Output.Output == "flat",
+		strings.HasPrefix(args.Output.Output, "table="):
+	default:
+		return ErrInvalidOutputOptionSpecified
 	}
 
 	return nil
@@ -601,4 +618,17 @@ func (args *Args) formatByteCount(x transrpc.ByteCount, hasSuffix bool) string {
 		return x.Format(!args.Output.SI, prec, suffix)
 	}
 	return fmt.Sprintf("%d%s", x, suffix)
+}
+
+// ResultOptions builds result options for arguments.
+func (args *Args) ResultOptions(opts ...ResultOption) []ResultOption {
+	return append(opts,
+		Output(args.Output.Output),
+		SortBy(args.Output.SortBy, args.Output.SortByWasSet),
+		SortOrder(args.Output.SortOrder),
+		ColumnNames(args.Output.ColumnNames),
+		FormatByteCount(args.formatByteCount),
+		NoHeaders(args.Output.NoHeaders),
+		NoTotals(args.Output.NoTotals),
+	)
 }
