@@ -533,8 +533,24 @@ func doTrackersReplace(args *Args) error {
 	if len(torrents) == 0 {
 		return nil
 	}
-	return transrpc.TorrentSet(convTorrentIDs(torrents)...).
-		WithTrackerReplace([]string{args.Tracker, args.TrackersReplaceParams.Replace}).Do(context.Background(), cl)
+	req := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "trackers")
+	res, err := req.Do(context.Background(), cl)
+	if err != nil {
+		return err
+	}
+	for _, t := range res.Torrents {
+		for _, tracker := range t.Trackers {
+			if tracker.Announce == args.Tracker {
+				if err := transrpc.TorrentSet(t.HashString).WithTrackerReplace(
+					[]interface{}{tracker.ID, args.TrackersReplaceParams.Replace},
+				).Do(context.Background(), cl); err != nil {
+					return fmt.Errorf("could not replace tracker %d (%s) with %s for %s: %w",
+						tracker.ID, args.Tracker, args.TrackersReplaceParams.Replace, t.HashString, err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // doTrackersRemove is the high-level entry point for 'trackers remove'.
@@ -554,7 +570,9 @@ func doTrackersRemove(args *Args) error {
 	for _, t := range res.Torrents {
 		for _, tracker := range t.Trackers {
 			if tracker.Announce == args.Tracker {
-				if err := transrpc.TorrentSet(t.HashString).WithTrackerRemove([]int64{tracker.ID}).Do(context.Background(), cl); err != nil {
+				if err := transrpc.TorrentSet(t.HashString).WithTrackerRemove(
+					[]int64{tracker.ID},
+				).Do(context.Background(), cl); err != nil {
 					return fmt.Errorf("could not remove tracker %d (%s) from %s: %w", tracker.ID, args.Tracker, t.HashString, err)
 				}
 			}
