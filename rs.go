@@ -70,7 +70,7 @@ func NewResult(v interface{}, options ...ResultOption) *Result {
 	if z.Kind() != reflect.Slice && z.Elem().Kind() != reflect.Struct {
 		panic("v must be []struct")
 	}
-	res := &Result{res: z, index: "shortHash"}
+	res := &Result{res: z, index: "hashString"}
 	for _, o := range options {
 		o(res)
 	}
@@ -282,6 +282,9 @@ func (res *Result) sort(sortByField string) {
 
 // encodeJSON encodes the results to the writer as JSON.
 func (res *Result) encodeJSON(w io.Writer) error {
+	if res.res.Len() == 0 {
+		return nil
+	}
 	m := make(map[string]interface{})
 	for i := 0; i < res.res.Len(); i++ {
 		v := res.res.Index(i)
@@ -305,29 +308,49 @@ func (res *Result) encodeJSON(w io.Writer) error {
 
 // encodeYaml encodes the results to the writer as YAML.
 func (res *Result) encodeYaml(w io.Writer) error {
-	for i := 0; i < res.res.Len(); i++ {
-		fmt.Fprintln(w, "---")
-		v := res.res.Index(i)
-		z := v.Interface()
-		if res.yamlName != "" {
-			key, err := readFieldOrMethod(v, res.index)
+	if res.res.Len() == 0 {
+		return nil
+	}
+	if res.yamlName != "" {
+		var last string
+		var m map[string]interface{}
+		for i := 0; i < res.res.Len(); i++ {
+			v := res.res.Index(i)
+			key, err := readFieldOrMethodString(v, res.index)
 			if err != nil {
 				return err
 			}
-			z = map[string]interface{}{
-				res.index:    key,
-				res.yamlName: z,
+			if last != key {
+				if m != nil {
+					fmt.Fprintln(w, "---")
+					if err = yaml.NewEncoder(w).Encode(m); err != nil {
+						return err
+					}
+				}
+				m = map[string]interface{}{
+					res.index: key,
+				}
 			}
+			if _, ok := m[res.yamlName]; !ok {
+				m[res.yamlName] = reflect.MakeSlice(reflect.SliceOf(v.Type()), 0, 0).Interface()
+			}
+			m[res.yamlName] = reflect.Append(reflect.ValueOf(m[res.yamlName]), v).Interface()
+			last = key
 		}
-		if err := yaml.NewEncoder(w).Encode(z); err != nil {
-			return err
-		}
+		fmt.Fprintln(w, "---")
+		return yaml.NewEncoder(w).Encode(m)
+	}
+
+	for i := 0; i < res.res.Len(); i++ {
 	}
 	return nil
 }
 
 // encodeFlat encodes the results to the writer as a flat key map.
 func (res *Result) encodeFlat(w io.Writer) error {
+	if res.res.Len() == 0 {
+		return nil
+	}
 	var last string
 	for i := 0; i < res.res.Len(); i++ {
 		key, err := readFieldOrMethodString(res.res.Index(i), res.index)

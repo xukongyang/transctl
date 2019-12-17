@@ -253,8 +253,8 @@ type peer struct {
 	Progress           transrpc.Percent   `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
 	RateToClient       transrpc.ByteCount `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
 	RateToPeer         transrpc.ByteCount `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
-	ID                 int64              `json:"id,omitempty" yaml:"id,omitempty"`
-	HashString         string             `json:"hashString,omitempty" yaml:"hashString,omitempty"`
+	ID                 int64              `json:"id" yaml:"id"`
+	HashString         string             `json:"-" yaml:"-"`
 	ShortHash          string             `json:"-" yaml:"-"`
 }
 
@@ -312,8 +312,8 @@ type file struct {
 	Name           string             `json:"name,omitempty" yaml:"name,omitempty"`                     // tr_info
 	Wanted         bool               `json:"wanted,omitempty" yaml:"wanted,omitempty"`                 // tr_info
 	Priority       transrpc.Priority  `json:"priority,omitempty" yaml:"priority,omitempty"`             // tr_info
-	ID             int64              `json:"id,omitempty" yaml:"id,omitempty"`
-	HashString     string             `json:"hashString,omitempty" yaml:"hashString,omitempty"`
+	ID             int64              `json:"id" yaml:"id"`
+	HashString     string             `json:"-" yaml:"-"`
 	ShortHash      string             `json:"-" yaml:"-"`
 }
 
@@ -423,7 +423,7 @@ func doFilesSetPriority(args *Args) error {
 // tracker is combined fields of trackers, trackerStats from a torrent.
 type tracker struct {
 	Announce              string         `json:"announce,omitempty" yaml:"announce,omitempty"`                           // tr_tracker_info
-	ID                    int64          `json:"id,omitempty" yaml:"id,omitempty"`                                       // tr_tracker_info
+	ID                    int64          `json:"id" yaml:"id"`                                                           // tr_tracker_info
 	Scrape                string         `json:"scrape,omitempty" yaml:"scrape,omitempty"`                               // tr_tracker_info
 	Tier                  int64          `json:"tier,omitempty" yaml:"tier,omitempty"`                                   // tr_tracker_info
 	AnnounceState         transrpc.State `json:"announceState,omitempty" yaml:"announceState,omitempty"`                 // tr_tracker_stat
@@ -448,7 +448,7 @@ type tracker struct {
 	NextScrapeTime        transrpc.Time  `json:"nextScrapeTime,omitempty" yaml:"nextScrapeTime,omitempty"`               // tr_tracker_stat
 	ScrapeState           transrpc.State `json:"scrapeState,omitempty" yaml:"scrapeState,omitempty"`                     // tr_tracker_stat
 	SeederCount           int64          `json:"seederCount,omitempty" yaml:"seederCount,omitempty"`                     // tr_tracker_stat
-	HashString            string         `json:"hashString,omitempty" yaml:"hashString,omitempty"`
+	HashString            string         `json:"-" yaml:"-"`
 	ShortHash             string         `json:"-" yaml:"-"`
 }
 
