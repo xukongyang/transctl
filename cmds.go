@@ -301,6 +301,7 @@ func doPeersGet(args *Args) error {
 		WideColumns("address", "clientName", "isEncrypted", "port", "rateToClient", "rateToPeer", "progress", "shortHash"),
 		YamlName("peers"),
 		FlatName("peers"),
+		FlatKey("id"),
 	)...).Encode(os.Stdout)
 }
 
@@ -358,6 +359,7 @@ func doFilesGet(args *Args) error {
 		WideColumns("name", "priority", "wanted", "bytesCompleted", "length", "percentDone", "id", "shortHash"),
 		YamlName("files"),
 		FlatName("files"),
+		FlatKey("id"),
 	)...).Encode(os.Stdout)
 }
 
@@ -497,11 +499,13 @@ func doTrackersGet(args *Args) error {
 			}
 		}
 	}
+	// ANNOUNCE, STATUS, UPDATE, PEERS, SEEDS, CONNECTED, HASH
 	return NewResult(result, args.ResultOptions(
-		TableColumns("announce", "shortHash"),
-		WideColumns("announce", "shortHash"),
+		TableColumns("announce", "lastAnnounceResult", "lastAnnouncePeerCount", "seederCount", "shortHash"),
+		WideColumns("announce", "announceState", "lastAnnounceResult", "lastAnnounceTime", "nextAnnounceTime", "lastAnnouncePeerCount", "seederCount", "shortHash"),
 		YamlName("trackers"),
 		FlatName("trackers"),
+		FlatKey("id"),
 	)...).Encode(os.Stdout)
 }
 

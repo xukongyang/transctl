@@ -45,8 +45,11 @@ type Result struct {
 	// yamlName is the yaml key to encode with, otherwise encodes highest level.
 	yamlName string
 
-	// flatName is the flat key to encode with.
+	// flatName is the flat name to encode with.
 	flatName string
+
+	// flatKey is the flat index key to use.
+	flatKey string
 
 	// columnNames is the column name map.
 	columnNames map[string]string
@@ -318,17 +321,29 @@ func (res *Result) encodeYaml(w io.Writer) error {
 
 // encodeFlat encodes the results to the writer as a flat key map.
 func (res *Result) encodeFlat(w io.Writer) error {
+	var last string
 	for i := 0; i < res.res.Len(); i++ {
-		if i != 0 {
-			fmt.Fprintln(w)
-		}
 		key, err := readFieldOrMethodString(res.res.Index(i), res.index)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "[%s %q]\n", res.flatName, key)
+		if last != key {
+			if i != 0 {
+				fmt.Fprintln(w)
+			}
+			fmt.Fprintf(w, "[%s %q]\n", res.flatName, key)
+		}
+		last = key
 		m := make(map[string]string)
-		addFieldsToMap(m, "", res.res.Index(i))
+		var prefix string
+		if res.flatKey != "" {
+			s, err := readFieldOrMethodString(res.res.Index(i), res.flatKey)
+			if err != nil {
+				return err
+			}
+			prefix = s + "."
+		}
+		addFieldsToMap(m, prefix, res.res.Index(i))
 		var keys []string
 		for k := range m {
 			keys = append(keys, k)
@@ -393,6 +408,13 @@ func YamlName(yamlName string) ResultOption {
 func FlatName(flatName string) ResultOption {
 	return func(res *Result) {
 		res.flatName = flatName
+	}
+}
+
+// FlatKey is a result option to set the flat key field.
+func FlatKey(flatKey string) ResultOption {
+	return func(res *Result) {
+		res.flatKey = flatKey
 	}
 }
 

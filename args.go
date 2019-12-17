@@ -313,9 +313,9 @@ func NewArgs() (*Args, string, error) {
 		case "trackers get":
 			args.addOutputFlags(cmd, "id",
 				"announceState=state", "downloadCount=downloads", "hasAnnounced=announced", "hasScraped=scraped", "isBackup=backup",
-				"lastAnnouncePeerCount=lastPeerCount", "lastAnnounceResult=lastResult", "lastAnnounceStartTime=lastStartTime",
-				"lastAnnounceSucceeded=lastSucceeded", "lastAnnounceTime=lastTime", "lastAnnounceTimedOut=lastTimedOut",
-				"leecherCount=peers", "nextAnnounceTime=nextAnnounce", "nextScrapeTime=nextScrape", "seederCount=seeds", "shortHash=hash",
+				"lastAnnouncePeerCount=peers", "lastAnnounceResult=status", "lastAnnounceStartTime=lastStartTime",
+				"lastAnnounceSucceeded=lastSucceeded", "lastAnnounceTime=last", "lastAnnounceTimedOut=lastTimedOut",
+				"leecherCount=peers", "nextAnnounceTime=next", "nextScrapeTime=nextScrape", "seederCount=seeds", "shortHash=hash",
 			)
 
 		case "trackers add", "trackers remove":
