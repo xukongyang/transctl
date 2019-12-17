@@ -300,7 +300,7 @@ func doPeersGet(args *Args) error {
 	}
 	return NewResult(result, args.ResultOptions(
 		TableColumns("address", "clientName", "rateToClient", "rateToPeer", "progress", "shortHash"),
-		WideColumns("address", "clientName", "isEncrypted", "port", "rateToClient", "rateToPeer", "progress", "shortHash"),
+		WideColumns("address", "port", "clientName", "flagStr", "clientIsInterested", "isEncrypted", "rateToClient", "rateToPeer", "progress", "shortHash"),
 		YamlName("peers"),
 		FlatName("peers"),
 		FlatKey("id"),
