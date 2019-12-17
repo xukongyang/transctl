@@ -255,7 +255,7 @@ type peer struct {
 	RateToPeer         transrpc.ByteCount `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
 	ID                 int64              `json:"id,omitempty" yaml:"id,omitempty"`
 	HashString         string             `json:"hashString,omitempty" yaml:"hashString,omitempty"`
-	ShortHash          string
+	ShortHash          string             `json:"-" yaml:"-"`
 }
 
 // doPeersGet is the high-level entry point for 'peers get'.
@@ -314,7 +314,7 @@ type file struct {
 	Priority       transrpc.Priority  `json:"priority,omitempty" yaml:"priority,omitempty"`             // tr_info
 	ID             int64              `json:"id,omitempty" yaml:"id,omitempty"`
 	HashString     string             `json:"hashString,omitempty" yaml:"hashString,omitempty"`
-	ShortHash      string
+	ShortHash      string             `json:"-" yaml:"-"`
 }
 
 // PercentDone provides the
@@ -449,7 +449,7 @@ type tracker struct {
 	ScrapeState           transrpc.State `json:"scrapeState,omitempty" yaml:"scrapeState,omitempty"`                     // tr_tracker_stat
 	SeederCount           int64          `json:"seederCount,omitempty" yaml:"seederCount,omitempty"`                     // tr_tracker_stat
 	HashString            string         `json:"hashString,omitempty" yaml:"hashString,omitempty"`
-	ShortHash             string
+	ShortHash             string         `json:"-" yaml:"-"`
 }
 
 // doTrackersGet is the high-level entry point for 'trackers get'.

@@ -289,7 +289,14 @@ func (res *Result) encodeJSON(w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		m[key] = v.Interface()
+		if res.yamlName == "" && res.flatKey == "" {
+			m[key] = v.Interface()
+		} else {
+			if _, ok := m[key]; !ok {
+				m[key] = reflect.MakeSlice(reflect.SliceOf(v.Type()), 0, 0).Interface()
+			}
+			m[key] = reflect.Append(reflect.ValueOf(m[key]), v).Interface()
+		}
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
