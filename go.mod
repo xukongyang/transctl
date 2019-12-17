@@ -10,7 +10,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d
-	github.com/kenshaw/transrpc v0.0.0-20191217193037-0ae6c5658b1f
+	github.com/kenshaw/transrpc v0.0.0-20191217220605-46e6e31fafcf
 	github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0
 	github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687
 	github.com/olekukonko/tablewriter v0.0.4
