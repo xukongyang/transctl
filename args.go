@@ -294,7 +294,11 @@ func NewArgs() (*Args, string, error) {
 			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
 
 		case "peers get":
-			args.addOutputFlags(cmd, "address", "clientName=client", "rateToClient=down", "rateToPeer=up", "progress=%", "isEncrypted=encrypted", "shortHash=hash")
+			args.addOutputFlags(cmd, "address",
+				"clientName=client", "clientIsChoked=client choked", "clientIsInterested=interested", "flagStr=flags",
+				"isDownloadingFrom=downloading", "isEncrypted=encrypted", "isIncoming=incoming", "isUploadingTo=uploading",
+				"isUTP=utp", "peerIsChoked=peer choked", "progress=%", "rateToClient=down", "rateToPeer=up", "shortHash=hash",
+			)
 
 		case "files get":
 			args.addOutputFlags(cmd, "name")
