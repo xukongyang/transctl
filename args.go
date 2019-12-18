@@ -148,6 +148,12 @@ type Args struct {
 		Priority string
 	}
 
+	// FilesRenameParams are the files rename params.
+	FilesRenameParams struct {
+		OldPath string
+		NewPath string
+	}
+
 	// TrackersReplacePramas are the trackers replace params.
 	TrackersReplaceParams struct {
 		Replace string
@@ -247,6 +253,7 @@ func NewArgs() (*Args, string, error) {
 		"files set-priority", "Set torrent files' priority",
 		"files set-wanted", "Set torrent files as wanted",
 		"files set-unwanted", "Set torrent files as unwanted",
+		"files rename", "Rename torrent files",
 		"trackers get", "Get information about trackers",
 		"trackers add", "Add tracker to torrents",
 		"trackers replace", "Replace tracker for torrents",
@@ -309,6 +316,10 @@ func NewArgs() (*Args, string, error) {
 
 		case "files set-wanted", "files set-unwanted":
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
+
+		case "files rename":
+			cmd.Arg("old path", "old file path").Required().StringVar(&args.FilesRenameParams.OldPath)
+			cmd.Arg("new path", "new file path").Required().StringVar(&args.FilesRenameParams.NewPath)
 
 		case "trackers get":
 			args.addOutputFlags(cmd, "id",

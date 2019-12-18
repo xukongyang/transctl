@@ -384,12 +384,10 @@ func doFilesSet(field string) func(args *Args) error {
 		if len(torrents) == 0 {
 			return nil
 		}
-
 		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files").Do(context.Background(), cl)
 		if err != nil {
 			return nil
 		}
-
 		for _, t := range res.Torrents {
 			var files []string
 			for i := 0; i < len(t.Files); i++ {
@@ -416,6 +414,34 @@ func doFilesSetPriority(args *Args) error {
 		return doFilesSet("PriorityNormal")(args)
 	case "high":
 		return doFilesSet("PriorityHigh")(args)
+	}
+	return nil
+}
+
+// doFilesRename is the high-level entry point for 'files rename'.
+func doFilesRename(args *Args) error {
+	cl, torrents, err := findTorrents(args)
+	if err != nil {
+		return err
+	}
+	if len(torrents) == 0 {
+		return nil
+	}
+	req := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files")
+	res, err := req.Do(context.Background(), cl)
+	if err != nil {
+		return err
+	}
+	for _, t := range res.Torrents {
+		for _, f := range t.Files {
+			if f.Name == args.FilesRenameParams.OldPath {
+				if err = transrpc.TorrentRenamePath(
+					args.FilesRenameParams.OldPath, args.FilesRenameParams.NewPath, t.HashString,
+				).Do(context.Background(), cl); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }

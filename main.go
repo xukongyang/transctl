@@ -46,6 +46,7 @@ func run() error {
 		"files set-priority": doFilesSetPriority,
 		"files set-wanted":   doFilesSet("FilesWanted"),
 		"files set-unwanted": doFilesSet("FilesUnwanted"),
+		"files rename":       doFilesRename,
 		"trackers get":       doTrackersGet,
 		"trackers add":       doTrackersAdd,
 		"trackers replace":   doTrackersReplace,
