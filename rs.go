@@ -135,10 +135,6 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 			if h, ok := res.columnNames[cols[i]]; ok {
 				headers[i] = h
 			}
-
-			if headers[i] == "percent" {
-			}
-
 			headers[i] = strings.ToUpper(headers[i])
 			colnames[i] = snaker.ForceCamelIdentifier(cols[i])
 			if sortBy == cols[i] || strings.EqualFold(sortBy, headers[i]) {
