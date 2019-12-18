@@ -266,28 +266,82 @@ func (b Bool) MarshalYAML() (interface{}, error) {
 // ByteCount wraps a byte count as int64.
 type ByteCount int64
 
-// String satisfies the fmt.Stringer interface.
-func (bc ByteCount) String() string {
-	return bc.Format(true, 2, "")
-}
-
 // Format formats the byte count.
-func (bc ByteCount) Format(asIEC bool, prec int, suffix string) string {
+func (bc ByteCount) Format(asIEC bool, prec int) string {
 	c, sizes, end := int64(1000), "kMGTPEZY", "B"
 	if asIEC {
-		c, end, sizes = 1024, "iB", "KMGTPEZY"
+		c, sizes, end = 1024, "KMGTPEZY", "iB"
 	}
-
 	if int64(bc) < c {
-		return fmt.Sprintf("%d B%s", bc, suffix)
+		return fmt.Sprintf("%d B", bc)
 	}
-
 	exp, div := 0, c
 	for n := int64(bc) / c; n >= c; n /= c {
 		div *= c
 		exp++
 	}
-	return fmt.Sprintf("%."+fmt.Sprintf("%d", prec)+"f %c%s%s", float64(bc)/float64(div), sizes[exp], end, suffix)
+	return fmt.Sprintf("%."+strconv.Itoa(prec)+"f %c%s", float64(bc)/float64(div), sizes[exp], end)
+}
+
+// String satisfies the fmt.Stringer interface.
+func (bc ByteCount) String() string {
+	return bc.Format(true, 2)
+}
+
+// Int64 returns the byte count as an int64.
+func (bc ByteCount) Int64() int64 {
+	return int64(bc)
+}
+
+// Add adds i to the byte count.
+func (bc ByteCount) Add(i interface{}) interface{} {
+	return bc + i.(ByteCount)
+}
+
+// Rate is a bytes per second rate.
+type Rate int64
+
+// String satisfies the fmt.Stringer interface.
+func (r Rate) String() string {
+	return ByteCount(r).String() + "/s"
+}
+
+// Format formats the rate.
+func (r Rate) Format(asIEC bool, prec int) string {
+	return ByteCount(r).Format(asIEC, prec) + "/s"
+}
+
+// Int64 returns the rate as an int64.
+func (r Rate) Int64() int64 {
+	return int64(r)
+}
+
+// Add adds i to the byte count.
+func (r Rate) Add(i interface{}) interface{} {
+	return r + i.(Rate)
+}
+
+// Limit is a K bytes per second limit.
+type Limit int64
+
+// String satisfies the fmt.Stringer interface.
+func (l Limit) String() string {
+	return ByteCount(l*1000).String() + "/s"
+}
+
+// Format formats the rate.
+func (l Limit) Format(asIEC bool, prec int) string {
+	return ByteCount(l*1000).Format(asIEC, prec) + "/s"
+}
+
+// Int64 returns the rate as an int64.
+func (l Limit) Int64() int64 {
+	return int64(l)
+}
+
+// Add adds i to the byte count.
+func (l Limit) Add(i interface{}) interface{} {
+	return l + i.(Limit)
 }
 
 // Percent wraps a float64.
@@ -311,7 +365,7 @@ type Torrent struct {
 	DoneDate          Time      `json:"doneDate,omitempty" yaml:"doneDate,omitempty"`                   // tr_stat
 	DownloadDir       string    `json:"downloadDir,omitempty" yaml:"downloadDir,omitempty"`             // tr_torrent
 	DownloadedEver    ByteCount `json:"downloadedEver,omitempty" yaml:"downloadedEver,omitempty"`       // tr_stat
-	DownloadLimit     ByteCount `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`         // tr_torrent
+	DownloadLimit     Limit     `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`         // tr_torrent
 	DownloadLimited   bool      `json:"downloadLimited,omitempty" yaml:"downloadLimited,omitempty"`     // tr_torrent
 	Error             ErrNo     `json:"error,omitempty" yaml:"error,omitempty"`                         // tr_stat
 	ErrorString       string    `json:"errorString,omitempty" yaml:"errorString,omitempty"`             // tr_stat
@@ -344,22 +398,22 @@ type Torrent struct {
 	Name                    string    `json:"name,omitempty" yaml:"name,omitempty"`                                       // tr_info
 	PeerLimit               int64     `json:"peer-limit,omitempty" yaml:"peer-limit,omitempty"`                           // tr_torrent
 	Peers                   []struct {
-		Address            string    `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
-		ClientName         string    `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
-		ClientIsChoked     bool      `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
-		ClientIsInterested bool      `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
-		FlagStr            string    `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
-		IsDownloadingFrom  bool      `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
-		IsEncrypted        bool      `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
-		IsIncoming         bool      `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
-		IsUploadingTo      bool      `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
-		IsUTP              bool      `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
-		PeerIsChoked       bool      `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
-		PeerIsInterested   bool      `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
-		Port               int64     `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
-		Progress           Percent   `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
-		RateToClient       ByteCount `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
-		RateToPeer         ByteCount `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
+		Address            string  `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
+		ClientName         string  `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
+		ClientIsChoked     bool    `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
+		ClientIsInterested bool    `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
+		FlagStr            string  `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
+		IsDownloadingFrom  bool    `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
+		IsEncrypted        bool    `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
+		IsIncoming         bool    `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
+		IsUploadingTo      bool    `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
+		IsUTP              bool    `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
+		PeerIsChoked       bool    `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
+		PeerIsInterested   bool    `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
+		Port               int64   `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
+		Progress           Percent `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
+		RateToClient       Rate    `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
+		RateToPeer         Rate    `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
 	} `json:"peers,omitempty" yaml:"peers,omitempty"` // n/a
 	PeersConnected int64 `json:"peersConnected,omitempty" yaml:"peersConnected,omitempty"` // tr_stat
 	PeersFrom      struct {
@@ -379,8 +433,8 @@ type Torrent struct {
 	PieceSize          ByteCount  `json:"pieceSize,omitempty" yaml:"pieceSize,omitempty"`                   // tr_info
 	Priorities         []Priority `json:"priorities,omitempty" yaml:"priorities,omitempty"`                 // n/a
 	QueuePosition      int64      `json:"queuePosition,omitempty" yaml:"queuePosition,omitempty"`           // tr_stat
-	RateDownload       ByteCount  `json:"rateDownload,omitempty" yaml:"rateDownload,omitempty"`             // tr_stat
-	RateUpload         ByteCount  `json:"rateUpload,omitempty" yaml:"rateUpload,omitempty"`                 // tr_stat
+	RateDownload       Rate       `json:"rateDownload,omitempty" yaml:"rateDownload,omitempty"`             // tr_stat
+	RateUpload         Rate       `json:"rateUpload,omitempty" yaml:"rateUpload,omitempty"`                 // tr_stat
 	RecheckProgress    Percent    `json:"recheckProgress,omitempty" yaml:"recheckProgress,omitempty"`       // tr_stat
 	SecondsDownloading Duration   `json:"secondsDownloading,omitempty" yaml:"secondsDownloading,omitempty"` // tr_stat
 	SecondsSeeding     Duration   `json:"secondsSeeding,omitempty" yaml:"secondsSeeding,omitempty"`         // tr_stat
@@ -428,7 +482,7 @@ type Torrent struct {
 	TotalSize           ByteCount `json:"totalSize,omitempty" yaml:"totalSize,omitempty"`                     // tr_info
 	TorrentFile         string    `json:"torrentFile,omitempty" yaml:"torrentFile,omitempty"`                 // tr_info
 	UploadedEver        ByteCount `json:"uploadedEver,omitempty" yaml:"uploadedEver,omitempty"`               // tr_stat
-	UploadLimit         int64     `json:"uploadLimit,omitempty" yaml:"uploadLimit,omitempty"`                 // tr_torrent
+	UploadLimit         Limit     `json:"uploadLimit,omitempty" yaml:"uploadLimit,omitempty"`                 // tr_torrent
 	UploadLimited       bool      `json:"uploadLimited,omitempty" yaml:"uploadLimited,omitempty"`             // tr_torrent
 	UploadRatio         float64   `json:"uploadRatio,omitempty" yaml:"uploadRatio,omitempty"`                 // tr_stat
 	Wanted              []Bool    `json:"wanted,omitempty" yaml:"wanted,omitempty"`                           // n/a
@@ -1654,11 +1708,11 @@ func (req *SessionStatsRequest) Do(ctx context.Context, cl *Client) (*SessionSta
 
 // SessionStatsResponse is the session stats response.
 type SessionStatsResponse struct {
-	ActiveTorrentCount int64     `json:"activeTorrentCount,omitempty" yaml:"activeTorrentCount,omitempty"`
-	DownloadSpeed      ByteCount `json:"downloadSpeed,omitempty" yaml:"downloadSpeed,omitempty"`
-	PausedTorrentCount int64     `json:"pausedTorrentCount,omitempty" yaml:"pausedTorrentCount,omitempty"`
-	TorrentCount       int64     `json:"torrentCount,omitempty" yaml:"torrentCount,omitempty"`
-	UploadSpeed        ByteCount `json:"uploadSpeed,omitempty" yaml:"uploadSpeed,omitempty"`
+	ActiveTorrentCount int64 `json:"activeTorrentCount,omitempty" yaml:"activeTorrentCount,omitempty"`
+	DownloadSpeed      Rate  `json:"downloadSpeed,omitempty" yaml:"downloadSpeed,omitempty"`
+	PausedTorrentCount int64 `json:"pausedTorrentCount,omitempty" yaml:"pausedTorrentCount,omitempty"`
+	TorrentCount       int64 `json:"torrentCount,omitempty" yaml:"torrentCount,omitempty"`
+	UploadSpeed        Rate  `json:"uploadSpeed,omitempty" yaml:"uploadSpeed,omitempty"`
 	CumulativeStats    struct {
 		UploadedBytes   ByteCount `json:"uploadedBytes,omitempty" yaml:"uploadedBytes,omitempty"`     // tr_session_stats
 		DownloadedBytes ByteCount `json:"downloadedBytes,omitempty" yaml:"downloadedBytes,omitempty"` // tr_session_stats
