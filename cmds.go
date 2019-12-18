@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -581,27 +579,52 @@ func doTrackersRemove(args *Args) error {
 	return nil
 }
 
+type keypair struct {
+	HashString string      `json:"-" yaml:"-"`
+	Name       string      `json:"name,omitempty" yaml:"name,omitempty"`
+	Key        string      `json:"-" yaml:"-"`
+	Value      interface{} `json:"value,omitempty" yaml:"value,omitempty"`
+	ID         int64       `json:"id" yaml:"id"`
+}
+
 // doStats is the high-level entry point for 'stats'.
 func doStats(args *Args) error {
 	cl, err := args.newClient()
 	if err != nil {
 		return err
 	}
-	stats, err := cl.SessionStats(context.Background())
+	res, err := cl.SessionStats(context.Background())
 	if err != nil {
 		return err
 	}
-	m := make(map[string]string)
-	addFieldsToMap(m, "", reflect.ValueOf(*stats))
-	var keys []string
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		fmt.Fprintf(os.Stdout, "%s=%s\n", strings.TrimSpace(k), strings.TrimSpace(m[k]))
-	}
-	return nil
+	args.Output.NoTotals = true
+	return NewResult(
+		[]keypair{
+			{"session-stats", "Active Torrent Count", "active-torrent-count", res.ActiveTorrentCount, 0},
+			{"session-stats", "Download Speed", "download-speed", res.DownloadSpeed, 1},
+			{"session-stats", "Paused Torrent Count", "paused-torrent-count", res.PausedTorrentCount, 2},
+			{"session-stats", "Torrent Count", "torrent-count", res.TorrentCount, 3},
+			{"session-stats", "Upload Speed", "upload-speed", res.UploadSpeed, 4},
+			{"session-stats", "Cumulative Uploaded", "cumulative-stats.uploaded-bytes", res.CumulativeStats.UploadedBytes, 5},
+			{"session-stats", "Cumulative Downloaded", "cumulative-stats.downloaded-bytes", res.CumulativeStats.DownloadedBytes, 6},
+			{"session-stats", "Cumulative Files Added", "cumulative-stats.files-added", res.CumulativeStats.FilesAdded, 7},
+			{"session-stats", "Cumulative Session Count", "cumulative-stats.session-count", res.CumulativeStats.SessionCount, 8},
+			{"session-stats", "Cumulative Seconds Active", "cumulative-stats.seconds-active", res.CumulativeStats.SecondsActive, 9},
+			{"session-stats", "Current Uploaded", "current-stats.uploaded-bytes", res.CurrentStats.UploadedBytes, 10},
+			{"session-stats", "Current Downloaded", "current-stats.downloaded-bytes", res.CurrentStats.DownloadedBytes, 11},
+			{"session-stats", "Current Files Added", "current-stats.files-added", res.CurrentStats.FilesAdded, 12},
+			{"session-stats", "Current Session Count", "current-stats.session-count", res.CurrentStats.SessionCount, 13},
+			{"session-stats", "Current Seconds Active", "current-stats.seconds-active", res.CurrentStats.SecondsActive, 14},
+		},
+		args.ResultOptions(
+			TableColumns("name", "value"),
+			WideColumns("name", "key", "value"),
+			YamlName("session-stats"),
+			FlatName("session-stats"),
+			FlatKey("id"),
+			FlatIndex("hashString"),
+		)...,
+	).Encode(os.Stdout)
 }
 
 // doShutdown is the high-level entry point for 'shutdown'.

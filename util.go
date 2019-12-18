@@ -180,6 +180,9 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 		}
 		name := strings.ReplaceAll(snaker.CamelToSnakeIdentifier(strings.SplitN(tag, ",", 2)[0]), "_", "-")
 		f := v.Field(i)
+		for f.Kind() == reflect.Interface {
+			f = f.Elem()
+		}
 		switch f.Kind() {
 		case reflect.String:
 			m[prefix+name] = f.String()
@@ -239,7 +242,7 @@ func addFieldsToMap(m map[string]string, prefix string, v reflect.Value) {
 			m[prefix+name] = strings.Join(s, ",")
 
 		default:
-			panic(fmt.Sprintf("unknown type: %d // %v", i, f))
+			panic(fmt.Sprintf("unknown type: %d // %v", i, f.Type()))
 		}
 	}
 }

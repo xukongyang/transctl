@@ -330,7 +330,8 @@ func NewArgs() (*Args, string, error) {
 	}
 
 	// stats command
-	_ = kingpin.Command("stats", "Get session statistics")
+	statsCmd := kingpin.Command("stats", "Get session statistics")
+	args.addOutputFlags(statsCmd, "name")
 
 	// shutdown command
 	_ = kingpin.Command("shutdown", "Shutdown remote host")
