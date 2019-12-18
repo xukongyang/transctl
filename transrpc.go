@@ -129,13 +129,24 @@ func (s *State) UnmarshalJSON(buf []byte) error {
 	return ErrInvalidState
 }
 
+// ErrNo wraps remote errors.
+type ErrNo int64
+
+// String satisifies the fmt.Stringer interface.
+func (errNo ErrNo) String() string {
+	if errNo == 0 {
+		return ""
+	}
+	return strconv.FormatInt(int64(errNo), 10)
+}
+
 // Time wraps time.Time.
 type Time time.Time
 
 // String satisfies the fmt.Stringer interface.
 func (t Time) String() string {
 	if time.Time(t).IsZero() {
-		return "-"
+		return ""
 	}
 	return time.Time(t).Format("2006-01-02 15:04:05")
 }
@@ -149,7 +160,7 @@ func (t *Time) UnmarshalJSON(buf []byte) error {
 	if err != nil {
 		return err
 	}
-	if i == 0 {
+	if i <= 0 {
 		return nil
 	}
 	*t = Time(time.Unix(i, 0))
@@ -158,11 +169,17 @@ func (t *Time) UnmarshalJSON(buf []byte) error {
 
 // MarshalJSON satisfies the json.Marshaler interface.
 func (t Time) MarshalJSON() ([]byte, error) {
+	if time.Time(t).IsZero() {
+		return []byte("-1"), nil
+	}
 	return []byte(strconv.FormatInt(time.Time(t).Unix(), 10)), nil
 }
 
 // MarshalYAML satisfies the yaml.Marshaler interface.
 func (t Time) MarshalYAML() (interface{}, error) {
+	if time.Time(t).IsZero() {
+		return -1, nil
+	}
 	return time.Time(t).Unix(), nil
 }
 
@@ -285,7 +302,7 @@ func (p Percent) String() string {
 type Torrent struct {
 	ActivityDate      Time      `json:"activityDate,omitempty" yaml:"activityDate,omitempty"`           // tr_stat
 	AddedDate         Time      `json:"addedDate,omitempty" yaml:"addedDate,omitempty"`                 // tr_stat
-	BandwidthPriority int64     `json:"bandwidthPriority,omitempty" yaml:"bandwidthPriority,omitempty"` // tr_priority_t
+	BandwidthPriority Priority  `json:"bandwidthPriority,omitempty" yaml:"bandwidthPriority,omitempty"` // tr_priority_t
 	Comment           string    `json:"comment,omitempty" yaml:"comment,omitempty"`                     // tr_info
 	CorruptEver       ByteCount `json:"corruptEver,omitempty" yaml:"corruptEver,omitempty"`             // tr_stat
 	Creator           string    `json:"creator,omitempty" yaml:"creator,omitempty"`                     // tr_info
@@ -296,7 +313,7 @@ type Torrent struct {
 	DownloadedEver    ByteCount `json:"downloadedEver,omitempty" yaml:"downloadedEver,omitempty"`       // tr_stat
 	DownloadLimit     ByteCount `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`         // tr_torrent
 	DownloadLimited   bool      `json:"downloadLimited,omitempty" yaml:"downloadLimited,omitempty"`     // tr_torrent
-	Error             int64     `json:"error,omitempty" yaml:"error,omitempty"`                         // tr_stat
+	Error             ErrNo     `json:"error,omitempty" yaml:"error,omitempty"`                         // tr_stat
 	ErrorString       string    `json:"errorString,omitempty" yaml:"errorString,omitempty"`             // tr_stat
 	Eta               Duration  `json:"eta,omitempty" yaml:"eta,omitempty"`                             // tr_stat
 	EtaIdle           Duration  `json:"etaIdle,omitempty" yaml:"etaIdle,omitempty"`                     // tr_stat
@@ -321,7 +338,7 @@ type Torrent struct {
 	Labels                  []string  `json:"labels,omitempty" yaml:"labels,omitempty"`                                   // tr_torrent
 	LeftUntilDone           ByteCount `json:"leftUntilDone,omitempty" yaml:"leftUntilDone,omitempty"`                     // tr_stat
 	MagnetLink              string    `json:"magnetLink,omitempty" yaml:"magnetLink,omitempty"`                           // n/a
-	ManualAnnounceTime      Duration  `json:"manualAnnounceTime,omitempty" yaml:"manualAnnounceTime,omitempty"`           // tr_stat
+	ManualAnnounceTime      Time      `json:"manualAnnounceTime,omitempty" yaml:"manualAnnounceTime,omitempty"`           // tr_stat
 	MaxConnectedPeers       int64     `json:"maxConnectedPeers,omitempty" yaml:"maxConnectedPeers,omitempty"`             // tr_torrent
 	MetadataPercentComplete Percent   `json:"metadataPercentComplete,omitempty" yaml:"metadataPercentComplete,omitempty"` // tr_stat
 	Name                    string    `json:"name,omitempty" yaml:"name,omitempty"`                                       // tr_info
@@ -502,7 +519,7 @@ func TorrentReannounce(ids ...interface{}) *TorrentReannounceRequest {
 type TorrentSetRequest struct {
 	changed map[string]bool
 
-	BandwidthPriority   int64         `json:"bandwidthPriority,omitempty" yaml:"bandwidthPriority,omitempty"`     // this torrent's bandwidth tr_priority_t
+	BandwidthPriority   Priority      `json:"bandwidthPriority,omitempty" yaml:"bandwidthPriority,omitempty"`     // this torrent's bandwidth tr_priority_t
 	DownloadLimit       int64         `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`             // maximum download speed (KBps)
 	DownloadLimited     bool          `json:"downloadLimited,omitempty" yaml:"downloadLimited,omitempty"`         // true if downloadLimit is honored
 	FilesWanted         []int64       `json:"files-wanted,omitempty" yaml:"files-wanted,omitempty"`               // indices of file(s) to download
@@ -629,7 +646,7 @@ func (req TorrentSetRequest) WithChanged(fields ...string) *TorrentSetRequest {
 }
 
 // WithBandwidthPriority sets this torrent's bandwidth tr_priority_t.
-func (req TorrentSetRequest) WithBandwidthPriority(bandwidthPriority int64) *TorrentSetRequest {
+func (req TorrentSetRequest) WithBandwidthPriority(bandwidthPriority Priority) *TorrentSetRequest {
 	req.BandwidthPriority = bandwidthPriority
 	return req.WithChanged("BandwidthPriority")
 }
