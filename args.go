@@ -472,7 +472,7 @@ func NewArgs() (*Args, string, error) {
 
 // addOutputFlags adds output flags to the cmd.
 func (args *Args) addOutputFlags(cmd *kingpin.CmdClause, sortBy string, columnNames ...string) {
-	cmd.Flag("output", "output format (table, wide, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
+	cmd.Flag("output", "output format (table, wide, all, cols=, json, yaml, flat; default: table)").Short('o').PlaceHolder("<format>").IsSetByUser(&args.Output.OutputWasSet).StringVar(&args.Output.Output)
 	cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 	cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 	cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
@@ -572,7 +572,7 @@ func (args *Args) loadConfig(cmd string) error {
 		args.Output.Output == "json",
 		args.Output.Output == "yaml",
 		args.Output.Output == "flat",
-		strings.HasPrefix(args.Output.Output, "table="):
+		strings.HasPrefix(args.Output.Output, "cols="):
 	default:
 		return ErrInvalidOutputOptionSpecified
 	}

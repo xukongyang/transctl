@@ -143,8 +143,8 @@ func doGet(args *Args) error {
 			fields = defaultTableCols
 		case args.Output.Output == "wide":
 			fields = defaultWideCols
-		case strings.HasPrefix(args.Output.Output, "table="):
-			fields = strings.Split(args.Output.Output[6:], ",")
+		case strings.HasPrefix(args.Output.Output, "cols="):
+			fields = strings.Split(args.Output.Output[5:], ",")
 		}
 		req := transrpc.TorrentGet(convTorrentIDs(torrents)...)
 		if len(fields) != 0 {

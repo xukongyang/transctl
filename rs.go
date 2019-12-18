@@ -100,8 +100,8 @@ func (res *Result) Encode(w io.Writer) error {
 		f = res.encodeYaml
 	case res.output == "flat":
 		f = res.encodeFlat
-	case strings.HasPrefix(res.output, "table="):
-		f = res.encodeTable(strings.Split(res.output[6:], ",")...)
+	case strings.HasPrefix(res.output, "cols="):
+		f = res.encodeTable(strings.Split(res.output[5:], ",")...)
 	default:
 		return ErrInvalidOutputOptionSpecified
 	}
