@@ -146,7 +146,6 @@ func doGet(args *Args) error {
 		case strings.HasPrefix(args.Output.Output, "table="):
 			fields = strings.Split(args.Output.Output[6:], ",")
 		}
-
 		req := transrpc.TorrentGet(convTorrentIDs(torrents)...)
 		if len(fields) != 0 {
 			var cols []string
@@ -254,8 +253,9 @@ type peer struct {
 	RateToClient       transrpc.ByteCount `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
 	RateToPeer         transrpc.ByteCount `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
 	ID                 int64              `json:"id" yaml:"id"`
-	HashString         string             `json:"-" yaml:"-"`
-	ShortHash          string             `json:"-" yaml:"-"`
+	Torrent            string             `json:"-" yaml:"-" all:"torrent"`
+	HashString         string             `json:"-" yaml:"-" all:"hashString"`
+	ShortHash          string             `json:"-" yaml:"-" all:"shortHash"`
 }
 
 // doPeersGet is the high-level entry point for 'peers get'.
@@ -266,7 +266,7 @@ func doPeersGet(args *Args) error {
 	}
 	var result []peer
 	if len(torrents) != 0 {
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "peers").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "peers").Do(context.Background(), cl)
 		if err != nil {
 			return err
 		}
@@ -290,6 +290,7 @@ func doPeersGet(args *Args) error {
 					RateToClient:       v.RateToClient,
 					RateToPeer:         v.RateToPeer,
 					ID:                 int64(i),
+					Torrent:            t.Name,
 					HashString:         t.HashString,
 					ShortHash:          t.ShortHash(),
 				})
@@ -314,8 +315,9 @@ type file struct {
 	Wanted         bool               `json:"wanted,omitempty" yaml:"wanted,omitempty"`                 // tr_info
 	Priority       transrpc.Priority  `json:"priority,omitempty" yaml:"priority,omitempty"`             // tr_info
 	ID             int64              `json:"id" yaml:"id"`
-	HashString     string             `json:"-" yaml:"-"`
-	ShortHash      string             `json:"-" yaml:"-"`
+	Torrent        string             `json:"-" yaml:"-" all:"torrent"`
+	HashString     string             `json:"-" yaml:"-" all:"hashString"`
+	ShortHash      string             `json:"-" yaml:"-" all:"shortHash"`
 }
 
 // PercentDone provides the
@@ -334,7 +336,7 @@ func doFilesGet(args *Args) error {
 	}
 	var result []file
 	if len(torrents) != 0 {
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files", "fileStats").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "files", "fileStats").Do(context.Background(), cl)
 		if err != nil {
 			return err
 		}
@@ -347,6 +349,7 @@ func doFilesGet(args *Args) error {
 					Wanted:         t.FileStats[i].Wanted,
 					Priority:       t.FileStats[i].Priority,
 					ID:             int64(i),
+					Torrent:        t.Name,
 					HashString:     t.HashString,
 					ShortHash:      t.ShortHash(),
 				})
@@ -474,8 +477,9 @@ type tracker struct {
 	NextScrapeTime        transrpc.Time  `json:"nextScrapeTime,omitempty" yaml:"nextScrapeTime,omitempty"`               // tr_tracker_stat
 	ScrapeState           transrpc.State `json:"scrapeState,omitempty" yaml:"scrapeState,omitempty"`                     // tr_tracker_stat
 	SeederCount           int64          `json:"seederCount,omitempty" yaml:"seederCount,omitempty"`                     // tr_tracker_stat
-	HashString            string         `json:"-" yaml:"-"`
-	ShortHash             string         `json:"-" yaml:"-"`
+	Torrent               string         `json:"-" yaml:"-" all:"torrent"`
+	HashString            string         `json:"-" yaml:"-" all:"hashString"`
+	ShortHash             string         `json:"-" yaml:"-" all:"shortHash"`
 }
 
 // doTrackersGet is the high-level entry point for 'trackers get'.
@@ -486,7 +490,7 @@ func doTrackersGet(args *Args) error {
 	}
 	var result []tracker
 	if len(torrents) != 0 {
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "trackers", "trackerStats").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "trackers", "trackerStats").Do(context.Background(), cl)
 		if err != nil {
 			return err
 		}
@@ -519,6 +523,7 @@ func doTrackersGet(args *Args) error {
 					NextScrapeTime:        t.TrackerStats[i].NextScrapeTime,
 					ScrapeState:           t.TrackerStats[i].ScrapeState,
 					SeederCount:           t.TrackerStats[i].SeederCount,
+					Torrent:               t.Name,
 					HashString:            t.HashString,
 					ShortHash:             t.ShortHash(),
 				})

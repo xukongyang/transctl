@@ -172,7 +172,110 @@ type Args struct {
 	Config *ini.File
 }
 
-var torrentColumnNames = []string{"rateDownload=down", "rateUpload=up", "haveValid=have", "percentDone=done", "shortHash=hash", "addedDate=added", "downloadDir=location", "peersConnected=peers"}
+var getColumnNames = []string{
+	"activityDate=activity",
+	"addedDate=added",
+	"bandwidthPriority=priority",
+	"corruptEver=corrupt",
+	"dateCreated=created",
+	"desiredAvailable=available",
+	"doneDate=finished",
+	"downloadDir=location",
+	"downloadLimit=limit",
+	"downloadLimited=limited",
+	"downloadedEver=downloaded",
+	"error=err",
+	"errorString=lastError",
+	"hashString=fullHash",
+	"haveUnchecked=unchecked",
+	"haveValid=have",
+	"honorsSessionLimits=honorsLimits",
+	"isFinished=finished",
+	"isPrivate=private",
+	"isStalled=stalled",
+	"leftUntilDone=left",
+	"magnetLink=magnet",
+	"manualAnnounceTime=manual",
+	"maxConnectedPeers=maxPeers",
+	"metadataPercentComplete=metadata",
+	"peer-limit=peerLimit",
+	"peersConnected=peers",
+	"peersGettingFromUs=peersFromUs",
+	"peersSendingToUs=peersToUs",
+	"percentDone=done",
+	"queuePosition=queue",
+	"rateDownload=down",
+	"rateUpload=up",
+	"recheckProgress=recheck",
+	"secondsDownloading=downloading",
+	"secondsSeeding=seeding",
+	"seedIdleLimit=idleLimit",
+	"seedIdleMode=idleMode",
+	"seedRatioLimit=ratioLimit",
+	"seedRatioMode=ratioMode",
+	"shortHash=hash",
+	"sizeWhenDone=whenDone",
+	"startDate=start",
+	"torrentFile=torrent",
+	"totalSize=total",
+	"uploadLimit=maxUpload",
+	"uploadLimited=limited",
+	"uploadRatio=ratio",
+	"uploadedEver=uploaded",
+	"webseedsSendingToUs=webseeds",
+}
+
+var peersGetColumnNames = []string{
+	"clientIsChoked=choked",
+	"clientIsInterested=interested",
+	"clientName=client",
+	"flagStr=flags",
+	"hashString=fullHash",
+	"isDownloadingFrom=downloading",
+	"isEncrypted=encrypted",
+	"isIncoming=incoming",
+	"isUTP=utp",
+	"isUploadingTo=uploading",
+	"peerIsChoked=peerChoked",
+	"peerIsInterested=peerInterested",
+	"progress=done",
+	"rateToClient=down",
+	"rateToPeer=up",
+	"shortHash=hash",
+}
+
+var filesGetColumnNames = []string{
+	"bytesCompleted=have",
+	"hashString=fullHash",
+	"length=size",
+	"percentDone=done",
+	"shortHash=hash",
+}
+
+var trackersGetColumnNames = []string{
+	"announceState=state",
+	"downloadCount=downloads",
+	"hasAnnounced=announced",
+	"hasScraped=scraped",
+	"hashString=fullHash",
+	"isBackup=backup",
+	"lastAnnouncePeerCount=peers",
+	"lastAnnounceResult=status",
+	"lastAnnounceStartTime=start",
+	"lastAnnounceSucceeded=succeeded",
+	"lastAnnounceTime=announced",
+	"lastAnnounceTimedOut=timedOut",
+	"lastScrapeResult=scrapeStatus",
+	"lastScrapeStartTime=scrapeStart",
+	"lastScrapeSucceeded=scrapeSucceeded",
+	"lastScrapeTime=scrapeAnnounced",
+	"lastScrapeTimedOut=scrapeTimedOut",
+	"leecherCount=leechers",
+	"nextAnnounceTime=next",
+	"nextScrapeTime=scrapeNext",
+	"seederCount=seeds",
+	"shortHash=hash",
+}
 
 // NewArgs creates the command args.
 func NewArgs() (*Args, string, error) {
@@ -225,7 +328,7 @@ func NewArgs() (*Args, string, error) {
 
 	// add command
 	addCmd := kingpin.Command("add", "Add torrents")
-	args.addOutputFlags(addCmd, "id", torrentColumnNames...)
+	args.addOutputFlags(addCmd, "id", getColumnNames...)
 	addCmd.Flag("bandwidth-priority", "bandwidth priority").Short('b').PlaceHolder("<bw>").Int64Var(&args.AddParams.BandwidthPriority)
 	addCmd.Flag("cookies", "cookies").Short('k').PlaceHolder("<name>=<v>").StringMapVar(&args.AddParams.Cookies)
 	addCmd.Flag("download-dir", "download directory").Short('d').PlaceHolder("<dir>").StringVar(&args.AddParams.DownloadDir)
@@ -285,7 +388,7 @@ func NewArgs() (*Args, string, error) {
 
 		switch commands[i] {
 		case "get":
-			args.addOutputFlags(cmd, "id", torrentColumnNames...)
+			args.addOutputFlags(cmd, "id", getColumnNames...)
 
 		case "set":
 			cmd.Arg("name", "option name").Required().StringVar(&args.ConfigParams.Name)
@@ -301,14 +404,10 @@ func NewArgs() (*Args, string, error) {
 			cmd.Flag("rm", "remove downloaded files").BoolVar(&args.RemoveParams.Remove)
 
 		case "peers get":
-			args.addOutputFlags(cmd, "address",
-				"clientName=client", "clientIsChoked=clientChoked", "clientIsInterested=interested", "flagStr=flags",
-				"isDownloadingFrom=downloading", "isEncrypted=encrypted", "isIncoming=incoming", "isUploadingTo=uploading",
-				"isUTP=utp", "peerIsChoked=peerChoked", "progress=done", "rateToClient=down", "rateToPeer=up", "shortHash=hash",
-			)
+			args.addOutputFlags(cmd, "address", peersGetColumnNames...)
 
 		case "files get":
-			args.addOutputFlags(cmd, "name", "bytesCompleted=have", "length=size", "percentDone=done", "shortHash=hash")
+			args.addOutputFlags(cmd, "name", filesGetColumnNames...)
 
 		case "files set-priority":
 			cmd.Arg("file mask", "file mask").Required().StringVar(&args.FileMask)
@@ -322,12 +421,7 @@ func NewArgs() (*Args, string, error) {
 			cmd.Arg("new path", "new file path").Required().StringVar(&args.FilesRenameParams.NewPath)
 
 		case "trackers get":
-			args.addOutputFlags(cmd, "id",
-				"announceState=state", "downloadCount=downloads", "hasAnnounced=announced", "hasScraped=scraped", "isBackup=backup",
-				"lastAnnouncePeerCount=peers", "lastAnnounceResult=status", "lastAnnounceStartTime=lastStartTime",
-				"lastAnnounceSucceeded=lastSucceeded", "lastAnnounceTime=last", "lastAnnounceTimedOut=lastTimedOut",
-				"leecherCount=peers", "nextAnnounceTime=next", "nextScrapeTime=nextScrape", "seederCount=seeds", "shortHash=hash",
-			)
+			args.addOutputFlags(cmd, "id", trackersGetColumnNames...)
 
 		case "trackers add", "trackers remove":
 			cmd.Arg("tracker", "tracker url").Required().StringVar(&args.Tracker)
@@ -474,6 +568,7 @@ func (args *Args) loadConfig(cmd string) error {
 	switch {
 	case args.Output.Output == "table",
 		args.Output.Output == "wide",
+		args.Output.Output == "all",
 		args.Output.Output == "json",
 		args.Output.Output == "yaml",
 		args.Output.Output == "flat",

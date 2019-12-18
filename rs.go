@@ -88,6 +88,12 @@ func (res *Result) Encode(w io.Writer) error {
 		f = res.encodeTable(res.tableCols...)
 	case res.output == "wide":
 		f = res.encodeTable(res.wideCols...)
+	case res.output == "all":
+		cols, err := res.buildAllColumns()
+		if err != nil {
+			return err
+		}
+		f = res.encodeTable(cols...)
 	case res.output == "json":
 		f = res.encodeJSON
 	case res.output == "yaml":
@@ -100,6 +106,31 @@ func (res *Result) Encode(w io.Writer) error {
 		return ErrInvalidOutputOptionSpecified
 	}
 	return f(w)
+}
+
+// buildAllColumns builds all column names from the reflected result type.
+func (res *Result) buildAllColumns() ([]string, error) {
+	typ := res.res.Type().Elem()
+	var cols []string
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		tag := strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
+		if all := f.Tag.Get("all"); all != "" {
+			tag = all
+		}
+		if tag == "" || tag == "-" || f.Type.Kind() == reflect.Slice {
+			continue
+		}
+		cols = append(cols, tag)
+	}
+	for i := 0; i < typ.NumMethod(); i++ {
+		m := typ.Method(i)
+		if m.Type.NumIn() == 1 && m.Type.NumOut() == 1 && m.Type.Out(0).Kind() == reflect.String {
+			cols = append(cols, snaker.ForceLowerCamelIdentifier(m.Name))
+		}
+	}
+	sort.Strings(cols)
+	return cols, nil
 }
 
 // encodeTable encodes the results to the writer as at table.
@@ -135,7 +166,7 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 			if h, ok := res.columnNames[cols[i]]; ok {
 				headers[i] = h
 			}
-			headers[i] = strings.ToUpper(headers[i])
+			headers[i] = strings.ToUpper(strings.ReplaceAll(snaker.CamelToSnake(headers[i]), "_", " "))
 			colnames[i] = snaker.ForceCamelIdentifier(cols[i])
 			if sortBy == cols[i] || strings.EqualFold(sortBy, headers[i]) {
 				sortByField = colnames[i]
