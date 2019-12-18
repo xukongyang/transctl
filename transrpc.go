@@ -1637,24 +1637,24 @@ func (req *SessionStatsRequest) Do(ctx context.Context, cl *Client) (*SessionSta
 
 // SessionStatsResponse is the session stats response.
 type SessionStatsResponse struct {
-	ActiveTorrentCount int64 `json:"activeTorrentCount,omitempty" yaml:"activeTorrentCount,omitempty"`
-	DownloadSpeed      int64 `json:"downloadSpeed,omitempty" yaml:"downloadSpeed,omitempty"`
-	PausedTorrentCount int64 `json:"pausedTorrentCount,omitempty" yaml:"pausedTorrentCount,omitempty"`
-	TorrentCount       int64 `json:"torrentCount,omitempty" yaml:"torrentCount,omitempty"`
-	UploadSpeed        int64 `json:"uploadSpeed,omitempty" yaml:"uploadSpeed,omitempty"`
+	ActiveTorrentCount int64     `json:"activeTorrentCount,omitempty" yaml:"activeTorrentCount,omitempty"`
+	DownloadSpeed      ByteCount `json:"downloadSpeed,omitempty" yaml:"downloadSpeed,omitempty"`
+	PausedTorrentCount int64     `json:"pausedTorrentCount,omitempty" yaml:"pausedTorrentCount,omitempty"`
+	TorrentCount       int64     `json:"torrentCount,omitempty" yaml:"torrentCount,omitempty"`
+	UploadSpeed        ByteCount `json:"uploadSpeed,omitempty" yaml:"uploadSpeed,omitempty"`
 	CumulativeStats    struct {
-		UploadedBytes   int64    `json:"uploadedBytes,omitempty" yaml:"uploadedBytes,omitempty"`     // tr_session_stats
-		DownloadedBytes int64    `json:"downloadedBytes,omitempty" yaml:"downloadedBytes,omitempty"` // tr_session_stats
-		FilesAdded      int64    `json:"filesAdded,omitempty" yaml:"filesAdded,omitempty"`           // tr_session_stats
-		SessionCount    int64    `json:"sessionCount,omitempty" yaml:"sessionCount,omitempty"`       // tr_session_stats
-		SecondsActive   Duration `json:"secondsActive,omitempty" yaml:"secondsActive,omitempty"`     // tr_session_stats
+		UploadedBytes   ByteCount `json:"uploadedBytes,omitempty" yaml:"uploadedBytes,omitempty"`     // tr_session_stats
+		DownloadedBytes ByteCount `json:"downloadedBytes,omitempty" yaml:"downloadedBytes,omitempty"` // tr_session_stats
+		FilesAdded      int64     `json:"filesAdded,omitempty" yaml:"filesAdded,omitempty"`           // tr_session_stats
+		SessionCount    int64     `json:"sessionCount,omitempty" yaml:"sessionCount,omitempty"`       // tr_session_stats
+		SecondsActive   Duration  `json:"secondsActive,omitempty" yaml:"secondsActive,omitempty"`     // tr_session_stats
 	} `json:"cumulative-stats,omitempty" yaml:"cumulative-stats,omitempty"`
 	CurrentStats struct {
-		UploadedBytes   int64    `json:"uploadedBytes,omitempty" yaml:"uploadedBytes,omitempty"`     // tr_session_stats
-		DownloadedBytes int64    `json:"downloadedBytes,omitempty" yaml:"downloadedBytes,omitempty"` // tr_session_stats
-		FilesAdded      int64    `json:"filesAdded,omitempty" yaml:"filesAdded,omitempty"`           // tr_session_stats
-		SessionCount    int64    `json:"sessionCount,omitempty" yaml:"sessionCount,omitempty"`       // tr_session_stats
-		SecondsActive   Duration `json:"secondsActive,omitempty" yaml:"secondsActive,omitempty"`     // tr_session_stats
+		UploadedBytes   ByteCount `json:"uploadedBytes,omitempty" yaml:"uploadedBytes,omitempty"`     // tr_session_stats
+		DownloadedBytes ByteCount `json:"downloadedBytes,omitempty" yaml:"downloadedBytes,omitempty"` // tr_session_stats
+		FilesAdded      int64     `json:"filesAdded,omitempty" yaml:"filesAdded,omitempty"`           // tr_session_stats
+		SessionCount    int64     `json:"sessionCount,omitempty" yaml:"sessionCount,omitempty"`       // tr_session_stats
+		SecondsActive   Duration  `json:"secondsActive,omitempty" yaml:"secondsActive,omitempty"`     // tr_session_stats
 	} `json:"current-stats,omitempty" yaml:"current-stats,omitempty"`
 }
 
