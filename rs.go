@@ -15,6 +15,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ByteFormatter is the shared interface for byte counts, rates, and limits.
+type ByteFormatter interface {
+	String() string
+	Format(bool, int) string
+	Int64() int64
+	Add(interface{}) interface{}
+}
+
 // Result is a wraper for a slice of structs. Uses reflection to iterate the
 // items and output based on
 type Result struct {
@@ -57,8 +65,8 @@ type Result struct {
 	// columnNames is the column name map.
 	columnNames map[string]string
 
-	// formatByteCount is the byte count format func.
-	formatByteCount func(transrpc.ByteCount, bool) string
+	// formatBytes is the byte format func.
+	formatBytes func(ByteFormatter) string
 
 	// noHeaders is the no headers output toggle.
 	noHeaders bool
@@ -201,7 +209,7 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 
 		// process
 		hasTotals := false
-		display, totals := make([]bool, len(cols)), make([]transrpc.ByteCount, len(cols))
+		display, totals := make([]bool, len(cols)), make([]ByteFormatter, len(cols))
 		for j := 0; j < res.res.Len(); j++ {
 			row := make([]string, len(cols))
 			for i := 0; i < len(cols); i++ {
@@ -209,14 +217,19 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 				if err != nil {
 					return err
 				}
-				x, ok := v.(transrpc.ByteCount)
+				x, ok := v.(ByteFormatter)
 				if !ok {
 					row[i] = fmt.Sprintf("%v", v)
 					continue
 				}
-				totals[i] += x
-				hasTotals, display[i] = true, true
-				row[i] = res.formatByteCount(x, strings.Contains(cols[i], "rate"))
+				row[i] = res.formatBytes(x)
+				if !res.noTotals {
+					if totals[i] == nil {
+						totals[i] = reflect.Zero(reflect.TypeOf(x)).Interface().(ByteFormatter)
+					}
+					totals[i] = totals[i].Add(x).(ByteFormatter)
+					hasTotals, display[i] = true, true
+				}
 			}
 			tbl.Append(row)
 		}
@@ -227,7 +240,7 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 				if !display[i] {
 					continue
 				}
-				row[i] = res.formatByteCount(totals[i], strings.Contains(cols[i], "rate"))
+				row[i] = res.formatBytes(totals[i])
 			}
 			tbl.Append(row)
 		}
@@ -492,11 +505,10 @@ func ColumnNames(columnNames map[string]string) ResultOption {
 	}
 }
 
-// FormatByteCount is a result option to set the func used to format byte
-// counts.
-func FormatByteCount(formatByteCount func(transrpc.ByteCount, bool) string) ResultOption {
+// FormatBytes is a result option to set the func used to format bytes.
+func FormatBytes(formatBytes func(ByteFormatter) string) ResultOption {
 	return func(res *Result) {
-		res.formatByteCount = formatByteCount
+		res.formatBytes = formatBytes
 	}
 }
 

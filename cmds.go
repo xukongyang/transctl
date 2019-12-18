@@ -236,26 +236,26 @@ func doRemove(args *Args) error {
 }
 
 type peer struct {
-	Address            string             `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
-	ClientName         string             `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
-	ClientIsChoked     bool               `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
-	ClientIsInterested bool               `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
-	FlagStr            string             `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
-	IsDownloadingFrom  bool               `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
-	IsEncrypted        bool               `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
-	IsIncoming         bool               `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
-	IsUploadingTo      bool               `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
-	IsUTP              bool               `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
-	PeerIsChoked       bool               `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
-	PeerIsInterested   bool               `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
-	Port               int64              `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
-	Progress           transrpc.Percent   `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
-	RateToClient       transrpc.ByteCount `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
-	RateToPeer         transrpc.ByteCount `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
-	ID                 int64              `json:"id" yaml:"id"`
-	Torrent            string             `json:"-" yaml:"-" all:"torrent"`
-	HashString         string             `json:"-" yaml:"-" all:"hashString"`
-	ShortHash          string             `json:"-" yaml:"-" all:"shortHash"`
+	Address            string           `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
+	ClientName         string           `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
+	ClientIsChoked     bool             `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
+	ClientIsInterested bool             `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
+	FlagStr            string           `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
+	IsDownloadingFrom  bool             `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
+	IsEncrypted        bool             `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
+	IsIncoming         bool             `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
+	IsUploadingTo      bool             `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
+	IsUTP              bool             `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
+	PeerIsChoked       bool             `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
+	PeerIsInterested   bool             `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
+	Port               int64            `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
+	Progress           transrpc.Percent `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
+	RateToClient       transrpc.Rate    `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
+	RateToPeer         transrpc.Rate    `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
+	ID                 int64            `json:"id" yaml:"id"`
+	Torrent            string           `json:"-" yaml:"-" all:"torrent"`
+	HashString         string           `json:"-" yaml:"-" all:"hashString"`
+	ShortHash          string           `json:"-" yaml:"-" all:"shortHash"`
 }
 
 // doPeersGet is the high-level entry point for 'peers get'.
@@ -684,7 +684,7 @@ func doFreeSpace(args *Args) error {
 				sz = "error: " + err.Error()
 			}
 		case args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI:
-			sz = size.Format(!args.Output.SI, 2, "")
+			sz = size.Format(!args.Output.SI, 2)
 		default:
 			sz = strconv.FormatInt(int64(size), 10)
 		}

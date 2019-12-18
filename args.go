@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -181,8 +182,8 @@ var getColumnNames = []string{
 	"desiredAvailable=available",
 	"doneDate=finished",
 	"downloadDir=location",
-	"downloadLimit=limit",
-	"downloadLimited=limited",
+	"downloadLimit=downLimit",
+	"downloadLimited=downLimited",
 	"downloadedEver=downloaded",
 	"error=err",
 	"errorString=lastError",
@@ -218,8 +219,8 @@ var getColumnNames = []string{
 	"startDate=start",
 	"torrentFile=torrent",
 	"totalSize=total",
-	"uploadLimit=maxUpload",
-	"uploadLimited=limited",
+	"uploadLimit=upLimit",
+	"uploadLimited=upLimited",
 	"uploadRatio=ratio",
 	"uploadedEver=uploaded",
 	"webseedsSendingToUs=webseeds",
@@ -712,19 +713,16 @@ func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) 
 	}
 }
 
-// formatByteCount formats a byte count for display.
-func (args *Args) formatByteCount(x transrpc.ByteCount, hasSuffix bool) string {
-	suffix, prec := "", 2
-	if hasSuffix {
-		suffix = "/s"
-	}
+// formatBytes formats a byte amount for display.
+func (args *Args) formatBytes(x ByteFormatter) string {
+	prec := 2
 	if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
-		if args.Output.SI && int64(x) < 1024*1024 || !args.Output.SI && int64(x) < 1000*1000 {
+		if i := x.Int64(); args.Output.SI && i < 1024*1024 || !args.Output.SI && i < 1000*1000 {
 			prec = 0
 		}
-		return x.Format(!args.Output.SI, prec, suffix)
+		return x.Format(!args.Output.SI, prec)
 	}
-	return fmt.Sprintf("%d%s", x, suffix)
+	return strconv.FormatInt(x.Int64(), 10)
 }
 
 // ResultOptions builds result options for arguments.
@@ -734,7 +732,7 @@ func (args *Args) ResultOptions(opts ...ResultOption) []ResultOption {
 		SortBy(args.Output.SortBy, args.Output.SortByWasSet),
 		SortOrder(args.Output.SortOrder),
 		ColumnNames(args.Output.ColumnNames),
-		FormatByteCount(args.formatByteCount),
+		FormatBytes(args.formatBytes),
 		NoHeaders(args.Output.NoHeaders),
 		NoTotals(args.Output.NoTotals),
 	)
