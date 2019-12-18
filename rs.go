@@ -280,6 +280,11 @@ func (res *Result) sort(sortByField string) {
 				return x > b.(float64)
 			}
 			return x < b.(float64)
+		case ByteFormatter:
+			if res.sortOrder == "desc" {
+				return x.Int64() > b.(ByteFormatter).Int64()
+			}
+			return x.Int64() < b.(ByteFormatter).Int64()
 		case transrpc.Percent:
 			if res.sortOrder == "desc" {
 				return x > b.(transrpc.Percent)
@@ -300,11 +305,6 @@ func (res *Result) sort(sortByField string) {
 				return x > b.(transrpc.Encryption)
 			}
 			return x < b.(transrpc.Encryption)
-		case transrpc.ByteCount:
-			if res.sortOrder == "desc" {
-				return x > b.(transrpc.ByteCount)
-			}
-			return x < b.(transrpc.ByteCount)
 		case transrpc.Duration:
 			if res.sortOrder == "desc" {
 				return x > b.(transrpc.Duration)
