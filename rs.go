@@ -50,6 +50,9 @@ type Result struct {
 	// sortOrder is the sort order, either asc or desc.
 	sortOrder string
 
+	// sortOrderWasSet is the sort order was set toggle.
+	sortOrderWasSet bool
+
 	// yamlName is the yaml key to encode with, otherwise encodes highest level.
 	yamlName string
 
@@ -181,14 +184,23 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 			}
 		}
 
+		// determine sort by and order
 		switch {
 		case sortByField == "" && !res.sortByWasSet:
 			sortByField = colnames[0]
 		case sortByField == "":
 			return ErrSortByNotInColumnList
 		}
-
-		res.sort(sortByField)
+		dir := res.sortOrder
+		if !res.sortOrderWasSet {
+			typ, ok := readFieldOrMethodType(res.res.Type().Elem(), sortByField)
+			if ok {
+				if _, ok = reflect.Zero(typ).Interface().(ByteFormatter); ok {
+					dir = "desc"
+				}
+			}
+		}
+		res.sort(sortByField, dir == "desc")
 
 		// tablewriter package is temporary until tblfmt is fixed
 		tbl := tablewriter.NewWriter(w)
@@ -251,72 +263,75 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 }
 
 // sort sorts the results based on the the specified sort by field.
-func (res *Result) sort(sortByField string) {
+func (res *Result) sort(sortBy string, sortDesc bool) {
 	if res.res.Len() == 0 {
 		return
 	}
 	sort.Slice(res.res.Interface(), func(i, j int) bool {
-		a, err := readFieldOrMethod(res.res.Index(i), sortByField)
+		a, err := readFieldOrMethod(res.res.Index(i), sortBy)
 		if err != nil {
 			panic(err)
 		}
-		b, err := readFieldOrMethod(res.res.Index(j), sortByField)
+		b, err := readFieldOrMethod(res.res.Index(j), sortBy)
 		if err != nil {
 			panic(err)
 		}
 		switch x := a.(type) {
 		case string:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(string)
 			}
 			return x < b.(string)
 		case int64:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(int64)
 			}
 			return x < b.(int64)
 		case float64:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(float64)
 			}
 			return x < b.(float64)
 		case ByteFormatter:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x.Int64() > b.(ByteFormatter).Int64()
 			}
 			return x.Int64() < b.(ByteFormatter).Int64()
 		case transrpc.Percent:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(transrpc.Percent)
 			}
 			return x < b.(transrpc.Percent)
 		case transrpc.Status:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(transrpc.Status)
 			}
 			return x < b.(transrpc.Status)
 		case transrpc.Priority:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(transrpc.Priority)
 			}
 			return x < b.(transrpc.Priority)
 		case transrpc.Encryption:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(transrpc.Encryption)
 			}
 			return x < b.(transrpc.Encryption)
 		case transrpc.Duration:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return x > b.(transrpc.Duration)
 			}
 			return x < b.(transrpc.Duration)
 		case transrpc.Time:
-			if res.sortOrder == "desc" {
+			if sortDesc {
 				return time.Time(x).After(time.Time(b.(transrpc.Time)))
 			}
 			return time.Time(x).Before(time.Time(b.(transrpc.Time)))
 		case transrpc.Bool:
-			return false
+			if sortDesc {
+				return x != b.(transrpc.Bool)
+			}
+			return x == b.(transrpc.Bool)
 		default:
 			panic(fmt.Sprintf("unknown comparison type %T", a))
 		}
@@ -464,9 +479,9 @@ func SortBy(sortBy string, sortByWasSet bool) ResultOption {
 }
 
 // SortOrder is a result option to set the sort order direction (asc or desc).
-func SortOrder(sortOrder string) ResultOption {
+func SortOrder(sortOrder string, sortOrderWasSet bool) ResultOption {
 	return func(res *Result) {
-		res.sortOrder = sortOrder
+		res.sortOrder, res.sortOrderWasSet = sortOrder, sortOrderWasSet
 	}
 }
 
@@ -533,7 +548,20 @@ func Index(index string) ResultOption {
 	}
 }
 
-// readFieldOrMethod returns the field or method name declared on v.
+// readFieldOrMethodType returns the type of the field or method name on x.
+func readFieldOrMethodType(x reflect.Type, name string) (reflect.Type, bool) {
+	f, ok := x.FieldByName(name)
+	if ok {
+		return f.Type, true
+	}
+	m, ok := x.MethodByName(name)
+	if ok {
+		return m.Type.Out(0), ok
+	}
+	return nil, false
+}
+
+// readFieldOrMethod returns the field or method name declared on x.
 func readFieldOrMethod(x reflect.Value, name string) (interface{}, error) {
 	name = snaker.ForceCamelIdentifier(name)
 	v := x.FieldByName(name)

@@ -100,14 +100,17 @@ type Args struct {
 		// ColumnNames is the column name map.
 		ColumnNames map[string]string
 
-		// SortBy is the column to sort by.
+		// SortBy is the to sort by field.
 		SortBy string
 
-		// SortByWasSet is the sort by set toggle.
+		// SortByWasSet is the sort by was set toggle.
 		SortByWasSet bool
 
-		// SortOrder ist he sort by order.
+		// SortOrder is the sort order direction.
 		SortOrder string
+
+		// SortOrderWasSet is the sort order was set toggle
+		SortOrderWasSet bool
 	}
 
 	// ConfigParams are the config params.
@@ -482,8 +485,8 @@ func (args *Args) addOutputFlags(cmd *kingpin.CmdClause, sortBy string, columnNa
 	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default(sortBy).IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
 	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
 	cmd.Flag("by", "sort output order by column").Hidden().PlaceHolder("<sort>").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
-	cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<order>").Default("asc").EnumVar(&args.Output.SortOrder, "asc", "desc")
-	cmd.Flag("order", "sort output order (asc, desc; default: asc)").Hidden().PlaceHolder("<order>").EnumVar(&args.Output.SortOrder, "asc", "desc")
+	cmd.Flag("sort-order", "sort output order (asc, desc; default: asc)").PlaceHolder("<order>").Default("asc").IsSetByUser(&args.Output.SortOrderWasSet).EnumVar(&args.Output.SortOrder, "asc", "desc")
+	cmd.Flag("order", "sort output order (asc, desc; default: asc)").Hidden().PlaceHolder("<order>").IsSetByUser(&args.Output.SortOrderWasSet).EnumVar(&args.Output.SortOrder, "asc", "desc")
 }
 
 // loadConfig loads the configuration file from disk.
@@ -730,7 +733,7 @@ func (args *Args) ResultOptions(opts ...ResultOption) []ResultOption {
 	return append(opts,
 		Output(args.Output.Output),
 		SortBy(args.Output.SortBy, args.Output.SortByWasSet),
-		SortOrder(args.Output.SortOrder),
+		SortOrder(args.Output.SortOrder, args.Output.SortOrderWasSet),
 		ColumnNames(args.Output.ColumnNames),
 		FormatBytes(args.formatBytes),
 		NoHeaders(args.Output.NoHeaders),
