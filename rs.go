@@ -195,7 +195,11 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 		if !res.sortOrderWasSet {
 			typ, ok := readFieldOrMethodType(res.res.Type().Elem(), sortByField)
 			if ok {
-				if _, ok = reflect.Zero(typ).Interface().(ByteFormatter); ok {
+				z := reflect.Zero(typ).Interface()
+				if _, ok = z.(ByteFormatter); ok {
+					dir = "desc"
+				}
+				if _, ok = z.(transrpc.Percent); ok {
 					dir = "desc"
 				}
 			}
