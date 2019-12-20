@@ -121,26 +121,33 @@ func (res *Result) Encode(w io.Writer) error {
 
 // buildAllColumns builds all column names from the reflected result type.
 func (res *Result) buildAllColumns() ([]string, error) {
+	wideMap := make(map[string]bool)
+	cols := res.wideCols
+	for _, k := range cols {
+		wideMap[k] = true
+	}
 	typ := res.res.Type().Elem()
-	var cols []string
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		tag := strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
 		if all := f.Tag.Get("all"); all != "" {
 			tag = all
 		}
-		if tag == "" || tag == "-" || f.Type.Kind() == reflect.Slice {
+		if tag == "" || tag == "-" || f.Type.Kind() == reflect.Slice || wideMap[tag] {
 			continue
 		}
 		cols = append(cols, tag)
 	}
 	for i := 0; i < typ.NumMethod(); i++ {
 		m := typ.Method(i)
+		name := snaker.ForceLowerCamelIdentifier(m.Name)
+		if wideMap[name] {
+			continue
+		}
 		if m.Type.NumIn() == 1 && m.Type.NumOut() == 1 && m.Type.Out(0).Kind() == reflect.String {
-			cols = append(cols, snaker.ForceLowerCamelIdentifier(m.Name))
+			cols = append(cols, name)
 		}
 	}
-	sort.Strings(cols)
 	return cols, nil
 }
 
