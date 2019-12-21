@@ -86,17 +86,11 @@ func extractVars(args *Args) (map[string][]string, error) {
 		inverseCols[k[1]] = k[0]
 	}
 
-	// build
-	vals := make(map[string]interface{})
-	for k, v := range sizeConsts {
-		vals[k] = v
-	}
-
 	keys := map[string]bool{"hashString": true}
 	typ := reflect.TypeOf(transrpc.Torrent{})
 	b, err := gval.Evaluate(
 		args.Filter.Filter,
-		vals,
+		nil,
 		buildQueryLanguage(),
 		gval.VariableSelector(func(path gval.Evaluables) gval.Evaluable {
 			k, err := path.EvalStrings(context.Background(), nil)
@@ -107,6 +101,7 @@ func extractVars(args *Args) (map[string][]string, error) {
 				}
 			}
 			return func(ctx context.Context, v interface{}) (interface{}, error) {
+				// evaluate the key name, return it's zero value
 				k, err := path.EvalStrings(ctx, v)
 				if err != nil {
 					return nil, err
