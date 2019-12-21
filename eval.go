@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"github.com/PaesslerAG/gval"
 	"github.com/gobwas/glob"
 	"github.com/kenshaw/transrpc"
+	"github.com/knq/snaker"
 )
 
 // findTorrents finds torrents based on the identifier args.
@@ -76,34 +79,64 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 
 // extractVars extracts the var names from the provided expression against thing.
 func extractVars(args *Args) (map[string][]string, error) {
-	keys := map[string]bool{"hashString": true}
-	_, err := gval.Evaluate(
-		args.Filter.Filter,
-		map[string]interface{}{},
-		buildQueryLanguage(),
-		gval.VariableSelector(func(path gval.Evaluables) gval.Evaluable {
-			k, err := path.EvalStrings(context.Background(), nil)
-			if err == nil {
-				key := strings.Join(k, ".")
-				if key != "identifier" {
-					keys[key] = true
-				}
-			}
-			return func(context.Context, interface{}) (interface{}, error) {
-				return true, nil
-			}
-		}),
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	// build column mappings
 	inverseCols := make(map[string]string, len(getColumnNames))
 	for _, n := range getColumnNames {
 		k := strings.SplitN(n, "=", 2)
 		inverseCols[k[1]] = k[0]
 	}
+
+	// build
+	vals := make(map[string]interface{})
+	for k, v := range sizeConsts {
+		vals[k] = v
+	}
+
+	keys := map[string]bool{"hashString": true}
+	typ := reflect.TypeOf(transrpc.Torrent{})
+	b, err := gval.Evaluate(
+		args.Filter.Filter,
+		vals,
+		buildQueryLanguage(),
+		gval.VariableSelector(func(path gval.Evaluables) gval.Evaluable {
+			k, err := path.EvalStrings(context.Background(), nil)
+			if err == nil {
+				key := strings.Join(k, ".")
+				if _, ok := sizeConsts[key]; !ok && key != "identifier" {
+					keys[key] = true
+				}
+			}
+			return func(ctx context.Context, v interface{}) (interface{}, error) {
+				k, err := path.EvalStrings(ctx, v)
+				if err != nil {
+					return nil, err
+				}
+				key := strings.Join(k, ".")
+				if c, ok := inverseCols[key]; ok {
+					key = c
+				}
+				if key == "identifier" {
+					return "", nil
+				}
+				if _, ok := sizeConsts[key]; ok {
+					return int64(0), nil
+				}
+				f, ok := readFieldOrMethodType(typ, snaker.ForceCamelIdentifier(key))
+				if !ok {
+					return nil, fmt.Errorf("unknown filter field or method %q", key)
+				}
+				return reflect.Zero(f).Interface(), nil
+			}
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := b.(bool); !ok {
+		return nil, ErrFilterMustReturnBool
+	}
+
+	// build field => variable map
 	m := make(map[string][]string)
 	for k := range keys {
 		v := k
@@ -118,6 +151,9 @@ func extractVars(args *Args) (map[string][]string, error) {
 // buildJSONMap builds a JSON map.
 func buildJSONMap(v interface{}, fields map[string][]string) map[string]interface{} {
 	res := map[string]interface{}{}
+	for k, v := range sizeConsts {
+		res[k] = v
+	}
 	if v == nil {
 		return res
 	}
@@ -254,4 +290,15 @@ func strlenFunc(args ...interface{}) (interface{}, error) {
 		return nil, ErrInvalidStrlenArguments
 	}
 	return (float64)(len(s)), nil
+}
+
+// sizeConsts are size constants used in filter expressions.
+var sizeConsts map[string]int64
+
+func init() {
+	sizeConsts = make(map[string]int64)
+	for i, r := range "kMGTPE" {
+		sizeConsts[string(r)+"B"] = int64(math.Pow(1000, float64(i+1)))
+		sizeConsts[strings.ToUpper(string(r))+"iB"] = int64(math.Pow(1024, float64(i+1)))
+	}
 }
