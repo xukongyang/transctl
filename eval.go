@@ -82,16 +82,15 @@ func extractVars(args *Args) (map[string][]string, error) {
 		map[string]interface{}{},
 		buildQueryLanguage(),
 		gval.VariableSelector(func(path gval.Evaluables) gval.Evaluable {
-			return func(ctx context.Context, v interface{}) (interface{}, error) {
-				k, err := path.EvalStrings(ctx, v)
-				if err != nil {
-					return nil, err
-				}
+			k, err := path.EvalStrings(context.Background(), nil)
+			if err == nil {
 				key := strings.Join(k, ".")
 				if key != "identifier" {
 					keys[key] = true
 				}
-				return key, nil
+			}
+			return func(context.Context, interface{}) (interface{}, error) {
+				return true, nil
 			}
 		}),
 	)
@@ -100,9 +99,10 @@ func extractVars(args *Args) (map[string][]string, error) {
 	}
 
 	// build column mappings
-	inverseCols := make(map[string]string, len(args.Output.ColumnNames))
-	for k, v := range args.Output.ColumnNames {
-		inverseCols[v] = k
+	inverseCols := make(map[string]string, len(getColumnNames))
+	for _, n := range getColumnNames {
+		k := strings.SplitN(n, "=", 2)
+		inverseCols[k[1]] = k[0]
 	}
 	m := make(map[string][]string)
 	for k := range keys {
