@@ -14,6 +14,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/jdxcode/netrc"
+	"github.com/kenshaw/transctl/tcutil"
 	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/ini"
 )
@@ -717,7 +718,7 @@ func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) 
 }
 
 // formatBytes formats a byte amount for display.
-func (args *Args) formatBytes(x ByteFormatter) string {
+func (args *Args) formatBytes(x tcutil.ByteFormatter) string {
 	prec := 2
 	if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
 		if i := x.Int64(); args.Output.SI && i < 1024*1024 || !args.Output.SI && i < 1000*1000 {

@@ -14,7 +14,21 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kenshaw/transctl/tcutil"
 )
+
+// ByteCount is a byte count.
+type ByteCount = tcutil.ByteCount
+
+// Rate is a byte per second rate.
+type Rate = tcutil.Rate
+
+// Limit is a K byte per second limit.
+type Limit = tcutil.Limit
+
+// Percent is a percent.
+type Percent = tcutil.Percent
 
 // Priority are file priorities.
 type Priority int64
@@ -261,95 +275,6 @@ func (b Bool) MarshalJSON() ([]byte, error) {
 // MarshalYAML satisfies the yaml.Marshaler interface.
 func (b Bool) MarshalYAML() (interface{}, error) {
 	return bool(b), nil
-}
-
-// ByteCount wraps a byte count as int64.
-type ByteCount int64
-
-// Format formats the byte count.
-func (bc ByteCount) Format(asIEC bool, prec int) string {
-	c, sizes, end := int64(1000), "kMGTPEZY", "B"
-	if asIEC {
-		c, sizes, end = 1024, "KMGTPEZY", "iB"
-	}
-	if int64(bc) < c {
-		return fmt.Sprintf("%d B", bc)
-	}
-	exp, div := 0, c
-	for n := int64(bc) / c; n >= c; n /= c {
-		div *= c
-		exp++
-	}
-	return fmt.Sprintf("%."+strconv.Itoa(prec)+"f %c%s", float64(bc)/float64(div), sizes[exp], end)
-}
-
-// String satisfies the fmt.Stringer interface.
-func (bc ByteCount) String() string {
-	return bc.Format(true, 2)
-}
-
-// Int64 returns the byte count as an int64.
-func (bc ByteCount) Int64() int64 {
-	return int64(bc)
-}
-
-// Add adds i to the byte count.
-func (bc ByteCount) Add(i interface{}) interface{} {
-	return bc + i.(ByteCount)
-}
-
-// Rate is a bytes per second rate.
-type Rate int64
-
-// String satisfies the fmt.Stringer interface.
-func (r Rate) String() string {
-	return ByteCount(r).String() + "/s"
-}
-
-// Format formats the rate.
-func (r Rate) Format(asIEC bool, prec int) string {
-	return ByteCount(r).Format(asIEC, prec) + "/s"
-}
-
-// Int64 returns the rate as an int64.
-func (r Rate) Int64() int64 {
-	return int64(r)
-}
-
-// Add adds i to the byte count.
-func (r Rate) Add(i interface{}) interface{} {
-	return r + i.(Rate)
-}
-
-// Limit is a K bytes per second limit.
-type Limit int64
-
-// String satisfies the fmt.Stringer interface.
-func (l Limit) String() string {
-	return ByteCount(l*1000).String() + "/s"
-}
-
-// Format formats the rate.
-func (l Limit) Format(asIEC bool, prec int) string {
-	return ByteCount(l*1000).Format(asIEC, prec) + "/s"
-}
-
-// Int64 returns the rate as an int64.
-func (l Limit) Int64() int64 {
-	return int64(l)
-}
-
-// Add adds i to the byte count.
-func (l Limit) Add(i interface{}) interface{} {
-	return l + i.(Limit)
-}
-
-// Percent wraps a float64.
-type Percent float64
-
-// String satisfies the fmt.Stringer interface.
-func (p Percent) String() string {
-	return fmt.Sprintf("%.f%%", float64(p)*100)
 }
 
 // Torrent holds information about a torrent.
