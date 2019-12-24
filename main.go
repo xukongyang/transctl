@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 )
 
 // version is the command version.

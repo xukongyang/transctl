@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 )
 
 // doConfig is the high-level entry point for 'config'.

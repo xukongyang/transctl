@@ -1,11 +1,13 @@
-// _example/example.go
+// _example/transrpc.go
+
+// Example transrpc client use.
 package main
 
 import (
 	"context"
 	"log"
 
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 )
 
 func main() {

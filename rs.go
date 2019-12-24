@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/snaker"
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v3"

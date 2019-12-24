@@ -10,7 +10,7 @@ import (
 
 	"github.com/PaesslerAG/gval"
 	"github.com/gobwas/glob"
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/snaker"
 )
 

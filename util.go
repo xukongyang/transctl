@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/snaker"
 )
 
