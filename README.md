@@ -1,7 +1,8 @@
 # transctl
 
-`transctl` is a command-line utility for controlling remote [Transmission
-RPC][transmission-rpc] hosts.
+`transctl` is a command-line utility for controlling remote Torrent clients
+([Transmission][transmission], [qBittorrent][qbittorrent], [Deluge][deluge],
+[rTorrent][rtorrent]).
 
 [Installing][] | [Building][] | [Using][] | [Features][] | [Releases][]
 
@@ -13,11 +14,11 @@ RPC][transmission-rpc] hosts.
 
 ## Overview
 
-`transctl` provides a modern command-line tool for controlling remote
-[Transmission RPC][transmission-rpc] hosts. `transctl` is inspired by Git,
-`kubectl` and other command-line tools for managing and working with multiple
-remote host contexts. `transctl` wraps the simple [`transrpc` client
-package][transrpc].
+`transctl` provides a unified command-line tool for controlling remote torrent
+clients.  Inspired by Git, `kubectl`, and other modern command-line tools,
+`transctl` provides a standard and easy way to manage torrents from the
+command-line.  The `transctl` project also provides Go client packages for each
+of the clients supported, in a standard Go-idiomatic fashion.
 
 ## Installing
 
@@ -32,7 +33,7 @@ package][transrpc].
 
 1. [Download a release for your platform][Releases]
 2. Extract the `transctl` or `transctl.exe` file from the `.tar.bz2` or `.zip` file
-3. Move the extracted executable to somewhere on your `$PATH` (Linux/macOS) or
+3. Move the extracted executable to somewhere on your `$PATH` (macOS/Linux) or
 `%PATH%` (Windows)
 
 ### Installing via Homebrew (macOS)
@@ -44,7 +45,7 @@ usual way with the [`brew` command][homebrew]:
 # add tap
 $ brew tap kenshaw/kenshaw
 
-# install transctl with "most" drivers
+# install transctl
 $ brew install transctl
 ```
 
@@ -68,6 +69,9 @@ scoop install transctl
 $ go get -u github.com/kenshaw/transctl
 ```
 
-[transmission-rpc]: https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
-[transrpc]: https://github.com/kenshaw/transrpc
+[deluge]: https://www.deluge-torrent.org/
+[homebrew]: https://brew.sh/
 [kenshaw-tap]: https://github.com/kenshaw/homebrew-kenshaw
+[qbittorrent]: https://www.qbittorrent.org/
+[rtorrent]: https://rakshasa.github.io/rtorrent/
+[transmission]: https://transmissionbt.com/
