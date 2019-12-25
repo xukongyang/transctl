@@ -1,4 +1,4 @@
-package main
+package providers
 
 import (
 	"context"
@@ -10,24 +10,25 @@ import (
 
 	"github.com/PaesslerAG/gval"
 	"github.com/gobwas/glob"
-	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/snaker"
+
+	"github.com/kenshaw/torctl/tctypes"
 )
 
 // findTorrents finds torrents based on the identifier args.
-func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
-	cl, err := args.newClient()
+func findTorrents(args *Args) (Provider, []tctypes.Torrent, error) {
+	p, err := args.NewProvider()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var req *transrpc.TorrentGetRequest
+	var req *TorrentGetRequest
 	var fields map[string][]string
 	switch {
 	case args.Filter.Recent:
-		req = transrpc.TorrentGet(transrpc.RecentlyActive).WithFields("hashString")
+		req = p.TorrentGet([]string{"hashString"}, "recently-active")
 	case args.Filter.ListAll:
-		req = transrpc.TorrentGet().WithFields("hashString")
+		req = p.TorrentGet([]string{"hashString"})
 	case args.Filter.Filter != "":
 		// evaluate filter expression to build field names
 		fields, err = extractVars(args)
@@ -39,7 +40,7 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 			fieldnames = append(fieldnames, k)
 		}
 		sort.Strings(fieldnames)
-		req = transrpc.TorrentGet().WithFields(fieldnames...)
+		req = p.TorrentGet(fieldnames)
 	default:
 		return nil, nil, ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent
 	}
@@ -55,7 +56,7 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 	l := buildQueryLanguage()
 
 	// filter torrents
-	var torrents []transrpc.Torrent
+	var torrents []tctypes.Torrent
 	for _, t := range res.Torrents {
 		m := buildJSONMap(t, fields)
 		if len(args.Args) == 0 {
@@ -77,7 +78,7 @@ func findTorrents(args *Args) (*transrpc.Client, []transrpc.Torrent, error) {
 	return cl, torrents, nil
 }
 
-// extractVars extracts the var names from the provided expression against thing.
+// extractVars extracts the var names from the provided expression.
 func extractVars(args *Args) (map[string][]string, error) {
 	// build column mappings
 	inverseCols := make(map[string]string, len(getColumnNames))
@@ -87,7 +88,7 @@ func extractVars(args *Args) (map[string][]string, error) {
 	}
 
 	keys := map[string]bool{"hashString": true}
-	typ := reflect.TypeOf(transrpc.Torrent{})
+	typ := reflect.TypeOf(tctypes.Torrent{})
 	b, err := gval.Evaluate(
 		args.Filter.Filter,
 		nil,
@@ -143,7 +144,8 @@ func extractVars(args *Args) (map[string][]string, error) {
 	return m, nil
 }
 
-// buildJSONMap builds a JSON map.
+// buildJSONMap uses reflect to build a map of v's fields, using it's json tag
+// as key.
 func buildJSONMap(v interface{}, fields map[string][]string) map[string]interface{} {
 	res := map[string]interface{}{}
 	for k, v := range sizeConsts {
@@ -184,7 +186,7 @@ func buildJSONMap(v interface{}, fields map[string][]string) map[string]interfac
 
 // appendMatch appends torrents matching the filter, returning the aggregate
 // slice.
-func appendMatch(torrents []transrpc.Torrent, args *Args, t transrpc.Torrent, m map[string]interface{}, l gval.Language) ([]transrpc.Torrent, error) {
+func appendMatch(torrents []tctypes.Torrent, args *Args, t tctypes.Torrent, m map[string]interface{}, l gval.Language) ([]tctypes.Torrent, error) {
 	match, err := gval.Evaluate(args.Filter.Filter, m, l)
 	if err != nil {
 		return nil, err
@@ -284,7 +286,7 @@ func strlenFunc(args ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, ErrInvalidStrlenArguments
 	}
-	return (float64)(len(s)), nil
+	return float64(len(s)), nil
 }
 
 // sizeConsts are size constants used in filter expressions.

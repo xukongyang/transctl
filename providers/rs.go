@@ -1,4 +1,4 @@
-package main
+package providers
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenshaw/transctl/tcutil"
-	"github.com/kenshaw/transctl/transrpc"
+	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/torctl/transrpc"
 	"github.com/knq/snaker"
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v3"
@@ -62,7 +62,7 @@ type Result struct {
 	columnNames map[string]string
 
 	// formatBytes is the byte format func.
-	formatBytes func(tcutil.ByteFormatter) string
+	formatBytes func(tctypes.ByteFormatter) string
 
 	// noHeaders is the no headers output toggle.
 	noHeaders bool
@@ -196,10 +196,10 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 			typ, ok := readFieldOrMethodType(res.res.Type().Elem(), sortByField)
 			if ok {
 				z := reflect.Zero(typ).Interface()
-				if _, ok = z.(tcutil.ByteFormatter); ok {
+				if _, ok = z.(tctypes.ByteFormatter); ok {
 					dir = "desc"
 				}
-				if _, ok = z.(tcutil.Percent); ok {
+				if _, ok = z.(Percent); ok {
 					dir = "desc"
 				}
 			}
@@ -225,7 +225,7 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 
 		// process
 		hasTotals := false
-		display, totals := make([]bool, len(cols)), make([]tcutil.ByteFormatter, len(cols))
+		display, totals := make([]bool, len(cols)), make([]ByteFormatter, len(cols))
 		for j := 0; j < res.res.Len(); j++ {
 			row := make([]string, len(cols))
 			for i := 0; i < len(cols); i++ {
@@ -233,7 +233,7 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 				if err != nil {
 					return err
 				}
-				x, ok := v.(tcutil.ByteFormatter)
+				x, ok := v.(ByteFormatter)
 				if !ok {
 					row[i] = fmt.Sprintf("%v", v)
 					continue
@@ -241,9 +241,9 @@ func (res *Result) encodeTable(columns ...string) func(w io.Writer) error {
 				row[i] = res.formatBytes(x)
 				if !res.noTotals {
 					if totals[i] == nil {
-						totals[i] = reflect.Zero(reflect.TypeOf(x)).Interface().(tcutil.ByteFormatter)
+						totals[i] = reflect.Zero(reflect.TypeOf(x)).Interface().(ByteFormatter)
 					}
-					totals[i] = totals[i].Add(x).(tcutil.ByteFormatter)
+					totals[i] = totals[i].Add(x).(ByteFormatter)
 					hasTotals, display[i] = true, true
 				}
 			}
@@ -296,16 +296,16 @@ func (res *Result) sort(sortBy string, sortDesc bool) {
 				return x > b.(float64)
 			}
 			return x < b.(float64)
-		case tcutil.ByteFormatter:
+		case ByteFormatter:
 			if sortDesc {
-				return x.Int64() > b.(tcutil.ByteFormatter).Int64()
+				return x.Int64() > b.(ByteFormatter).Int64()
 			}
-			return x.Int64() < b.(tcutil.ByteFormatter).Int64()
-		case tcutil.Percent:
+			return x.Int64() < b.(ByteFormatter).Int64()
+		case Percent:
 			if sortDesc {
-				return x > b.(tcutil.Percent)
+				return x > b.(Percent)
 			}
-			return x < b.(tcutil.Percent)
+			return x < b.(Percent)
 		case transrpc.Status:
 			if sortDesc {
 				return x > b.(transrpc.Status)
@@ -525,7 +525,7 @@ func ColumnNames(columnNames map[string]string) ResultOption {
 }
 
 // FormatBytes is a result option to set the func used to format bytes.
-func FormatBytes(formatBytes func(tcutil.ByteFormatter) string) ResultOption {
+func FormatBytes(formatBytes func(tctypes.ByteFormatter) string) ResultOption {
 	return func(res *Result) {
 		res.formatBytes = formatBytes
 	}

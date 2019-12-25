@@ -1,4 +1,4 @@
-// _example/transrpc.go
+// _examples/transrpc.go
 
 // Example transrpc client use.
 package main

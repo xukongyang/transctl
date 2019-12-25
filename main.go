@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kenshaw/transctl/transrpc"
+	"github.com/knq/snaker"
+
+	"github.com/kenshaw/torctl/providers"
+	_ "github.com/kenshaw/torctl/providers/deluge"
+	_ "github.com/kenshaw/torctl/providers/qbittorrent"
+	_ "github.com/kenshaw/torctl/providers/rtorrent"
+	_ "github.com/kenshaw/torctl/providers/transmission"
+	_ "github.com/kenshaw/torctl/providers/utorrent"
 )
 
 // version is the command version.
-var version = "0.0.0-dev"
+var (
+	name    = "torctl"
+	version = "0.0.0-dev"
+)
 
 func main() {
 	if err := run(); err != nil {
@@ -21,47 +31,48 @@ func main() {
 // run executes the command logic.
 func run() error {
 	// build args
-	args, cmd, err := NewArgs()
+	args, cmd, err := providers.NewArgs()
 	if err != nil {
 		return err
 	}
 
-	f := map[string]func(*Args) error{
-		"config":             doConfig,
-		"add":                doAdd,
-		"get":                doGet,
-		"set":                doSet,
-		"start":              doReq(transrpc.TorrentStart),
-		"stop":               doReq(transrpc.TorrentStop),
-		"move":               doMove,
-		"remove":             doRemove,
-		"verify":             doReq(transrpc.TorrentVerify),
-		"reannounce":         doReq(transrpc.TorrentReannounce),
-		"queue top":          doReq(transrpc.QueueMoveTop),
-		"queue bottom":       doReq(transrpc.QueueMoveBottom),
-		"queue up":           doReq(transrpc.QueueMoveUp),
-		"queue down":         doReq(transrpc.QueueMoveDown),
-		"peers get":          doPeersGet,
-		"files get":          doFilesGet,
-		"files set-priority": doFilesSetPriority,
-		"files set-wanted":   doFilesSet("FilesWanted"),
-		"files set-unwanted": doFilesSet("FilesUnwanted"),
-		"files rename":       doFilesRename,
-		"trackers get":       doTrackersGet,
-		"trackers add":       doTrackersAdd,
-		"trackers replace":   doTrackersReplace,
-		"trackers remove":    doTrackersRemove,
-		"stats":              doStats,
-		"shutdown":           doShutdown,
-		"free-space":         doFreeSpace,
-		"blocklist-update":   doBlocklistUpdate,
-		"port-test":          doPortTest,
+	f := map[string]func(*providers.Args) error{
+		"config":             providers.DoConfig,
+		"add":                providers.DoAdd,
+		"get":                providers.DoGet,
+		"set":                providers.DoSet,
+		"start":              providers.DoReq,
+		"stop":               providers.DoReq,
+		"move":               providers.DoMove,
+		"remove":             providers.DoRemove,
+		"verify":             providers.DoReq,
+		"reannounce":         providers.DoReq,
+		"queue top":          providers.DoReq,
+		"queue bottom":       providers.DoReq,
+		"queue up":           providers.DoReq,
+		"queue down":         providers.DoReq,
+		"peers get":          providers.DoPeersGet,
+		"files get":          providers.DoFilesGet,
+		"files set-priority": providers.DoFilesSet,
+		"files set-wanted":   providers.DoFilesSet,
+		"files set-unwanted": providers.DoFilesSet,
+		"files rename":       providers.DoFilesRename,
+		"trackers get":       providers.DoTrackersGet,
+		"trackers add":       providers.DoTrackersAdd,
+		"trackers replace":   providers.DoTrackersReplace,
+		"trackers remove":    providers.DoTrackersRemove,
+		"stats":              providers.DoStats,
+		"shutdown":           providers.DoShutdown,
+		"free-space":         providers.DoFreeSpace,
+		"blocklist-update":   providers.DoBlocklistUpdate,
+		"port-test":          providers.DoPortTest,
 	}[cmd]
 
-	// start --now special case
-	if cmd == "start" && args.StartParams.Now {
-		f = doReq(transrpc.TorrentStartNow)
-	}
+	return f(args, cmd)
+}
 
-	return f(args)
+func init() {
+	if err := snaker.AddInitialisms("UTP"); err != nil {
+		panic(err)
+	}
 }

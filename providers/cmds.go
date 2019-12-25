@@ -1,4 +1,4 @@
-package main
+package providers
 
 import (
 	"context"
@@ -10,16 +10,52 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
-	"github.com/kenshaw/transctl/tcutil"
-	"github.com/kenshaw/transctl/transrpc"
+	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/torctl/transrpc"
 )
 
-// doConfig is the high-level entry point for 'config'.
-func doConfig(args *Args) error {
+/*
+	"config":             doConfig,
+	"add":                doAdd,
+	"get":                doGet,
+	"set":                doSet,
+	"start":              doReq(transrpc.TorrentStart),
+	"stop":               doReq(transrpc.TorrentStop),
+	"move":               doMove,
+	"remove":             doRemove,
+	"verify":             doReq(transrpc.TorrentVerify),
+	"reannounce":         doReq(transrpc.TorrentReannounce),
+	"queue top":          doReq(transrpc.QueueMoveTop),
+	"queue bottom":       doReq(transrpc.QueueMoveBottom),
+	"queue up":           doReq(transrpc.QueueMoveUp),
+	"queue down":         doReq(transrpc.QueueMoveDown),
+	"peers get":          doPeersGet,
+	"files get":          doFilesGet,
+	"files set-priority": doFilesSetPriority,
+	"files set-wanted":   doFilesSet("FilesWanted"),
+	"files set-unwanted": doFilesSet("FilesUnwanted"),
+	"files rename":       doFilesRename,
+	"trackers get":       doTrackersGet,
+	"trackers add":       doTrackersAdd,
+	"trackers replace":   doTrackersReplace,
+	"trackers remove":    doTrackersRemove,
+	"stats":              doStats,
+	"shutdown":           doShutdown,
+	"free-space":         doFreeSpace,
+	"blocklist-update":   doBlocklistUpdate,
+	"port-test":          doPortTest,
+*/
+
+// DoConfig is the high-level entry point for 'config'.
+func DoConfig(args *Args, cmd string) error {
 	var store ConfigStore = args.Config
 	if args.ConfigParams.Remote {
 		var err error
-		store, err = NewRemoteConfigStore(args)
+		p, err := args.NewProvider()
+		if err != nil {
+			return err
+		}
+		store, err = p.NewRemoteConfigStore(context.Background())
 		if err != nil {
 			return err
 		}
@@ -51,29 +87,21 @@ func doConfig(args *Args) error {
 // magnetRE is a regexp for magnet URLs.
 var magnetRE = regexp.MustCompile(`(?i)^magnet:\?`)
 
-// doAdd is the high-level entry point for 'add'.
-func doAdd(args *Args) error {
-	cl, err := args.newClient()
+// DoAdd is the high-level entry point for 'add'.
+func DoAdd(args *Args, cmd string) error {
+	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
 
-	var result []transrpc.Torrent
+	var files []interface{}
 	for _, v := range args.Args {
-		// build request
-		req := transrpc.TorrentAdd().
-			WithCookiesMap(args.AddParams.Cookies).
-			WithDownloadDir(args.AddParams.DownloadDir).
-			WithPaused(args.AddParams.Paused).
-			WithPeerLimit(args.AddParams.PeerLimit).
-			WithBandwidthPriority(args.AddParams.BandwidthPriority)
-
 		// determine each arg is magnet link or file on disk
 		isMagnet := magnetRE.MatchString(v)
 		fi, err := os.Stat(v)
 		switch {
 		case err != nil && isMagnet:
-			req.Filename = v
+			files = append(files, v)
 		case err != nil && os.IsNotExist(err) && !isMagnet:
 			return fmt.Errorf("file not found: %s", v)
 		case err != nil:
@@ -81,26 +109,43 @@ func doAdd(args *Args) error {
 		case err == nil && fi.IsDir():
 			return fmt.Errorf("cannot add directory %s as torrent", v)
 		case err == nil:
-			req.Metainfo, err = ioutil.ReadFile(v)
+			var buf []byte
+			buf, err = ioutil.ReadFile(v)
 			if err != nil {
 				return err
 			}
+			files = append(files, buf)
 		}
-
-		// execute
-		res, err := req.Do(context.Background(), cl)
-		if err != nil {
-			return err
-		}
-		if res.TorrentAdded != nil {
-			result = append(result, *res.TorrentAdded)
-		}
-		if res.TorrentDuplicate != nil {
-			result = append(result, *res.TorrentDuplicate)
-		}
-
 	}
 
+	/*
+		result, err := p.Add(files...)
+			// build request
+			req := transrpc.TorrentAdd().
+				WithCookiesMap(args.AddParams.Cookies).
+				WithDownloadDir(args.AddParams.DownloadDir).
+				WithPaused(args.AddParams.Paused).
+				WithPeerLimit(args.AddParams.PeerLimit).
+				WithBandwidthPriority(args.AddParams.BandwidthPriority)
+
+			// execute
+			res, err := req.Do(context.Background(), cl)
+			if err != nil {
+				return err
+			}
+			if res.TorrentAdded != nil {
+				result = append(result, *res.TorrentAdded)
+			}
+			if res.TorrentDuplicate != nil {
+				result = append(result, *res.TorrentDuplicate)
+			}
+	*/
+
+	// execute
+	result, err := p.Add(context.Background(), files...)
+	if err != nil {
+		return err
+	}
 	if err = NewResult(result, args.ResultOptions(
 		TableColumns(defaultTableCols...),
 		WideColumns(defaultWideCols...),
@@ -121,8 +166,7 @@ func doAdd(args *Args) error {
 			}
 		}
 	}
-
-	return err
+	return nil
 }
 
 var (
@@ -130,13 +174,13 @@ var (
 	defaultWideCols  = []string{"id", "name", "peersConnected", "downloadDir", "addedDate", "status", "eta", "rateDownload", "rateUpload", "haveValid", "percentDone", "shortHash"}
 )
 
-// doGet is the high-level entry point for 'get'.
-func doGet(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoGet is the high-level entry point for 'get'.
+func DoGet(args *Args, cmd string) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
-	var result []transrpc.Torrent
+	var result []tctypes.Torrent
 	if len(torrents) != 0 {
 		var fields []string
 		switch {
@@ -181,9 +225,9 @@ func doGet(args *Args) error {
 	)...).Encode(os.Stdout)
 }
 
-// doSet is the high-level entry point for 'set'.
-func doSet(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoSet is the high-level entry point for 'set'.
+func DoSet(args *Args, cmd string) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -193,24 +237,24 @@ func doSet(args *Args) error {
 	return doWithAndExecute(cl, transrpc.TorrentSet(convTorrentIDs(torrents)...), "torrent", args.ConfigParams.Name, args.ConfigParams.Value)
 }
 
-// doReq creates the high-level entry points for general torrent manipulation
+// DoReq creates the high-level entry points for general torrent manipulation
 // requests.
-func doReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
+func DoReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
 	return func(args *Args) error {
-		cl, torrents, err := findTorrents(args)
+		p, torrents, err := findTorrents(args)
 		if err != nil {
 			return err
 		}
 		if len(torrents) == 0 {
 			return nil
 		}
-		return f(convTorrentIDs(torrents)...).Do(context.Background(), cl)
+		return f(convTorrentIDs(torrents)...).Do(context.Background(), p)
 	}
 }
 
-// doMove is the high-level entry point for 'move'.
-func doMove(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoMove is the high-level entry point for 'move'.
+func DoMove(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -222,9 +266,9 @@ func doMove(args *Args) error {
 	).Do(context.Background(), cl)
 }
 
-// doRemove is the high-level entry point for 'remove'.
-func doRemove(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoRemove is the high-level entry point for 'remove'.
+func DoRemove(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -236,36 +280,13 @@ func doRemove(args *Args) error {
 	).Do(context.Background(), cl)
 }
 
-type peer struct {
-	Address            string         `json:"address,omitempty" yaml:"address,omitempty"`                       // tr_peer_stat
-	ClientName         string         `json:"clientName,omitempty" yaml:"clientName,omitempty"`                 // tr_peer_stat
-	ClientIsChoked     bool           `json:"clientIsChoked,omitempty" yaml:"clientIsChoked,omitempty"`         // tr_peer_stat
-	ClientIsInterested bool           `json:"clientIsInterested,omitempty" yaml:"clientIsInterested,omitempty"` // tr_peer_stat
-	FlagStr            string         `json:"flagStr,omitempty" yaml:"flagStr,omitempty"`                       // tr_peer_stat
-	IsDownloadingFrom  bool           `json:"isDownloadingFrom,omitempty" yaml:"isDownloadingFrom,omitempty"`   // tr_peer_stat
-	IsEncrypted        bool           `json:"isEncrypted,omitempty" yaml:"isEncrypted,omitempty"`               // tr_peer_stat
-	IsIncoming         bool           `json:"isIncoming,omitempty" yaml:"isIncoming,omitempty"`                 // tr_peer_stat
-	IsUploadingTo      bool           `json:"isUploadingTo,omitempty" yaml:"isUploadingTo,omitempty"`           // tr_peer_stat
-	IsUTP              bool           `json:"isUTP,omitempty" yaml:"isUTP,omitempty"`                           // tr_peer_stat
-	PeerIsChoked       bool           `json:"peerIsChoked,omitempty" yaml:"peerIsChoked,omitempty"`             // tr_peer_stat
-	PeerIsInterested   bool           `json:"peerIsInterested,omitempty" yaml:"peerIsInterested,omitempty"`     // tr_peer_stat
-	Port               int64          `json:"port,omitempty" yaml:"port,omitempty"`                             // tr_peer_stat
-	Progress           tcutil.Percent `json:"progress,omitempty" yaml:"progress,omitempty"`                     // tr_peer_stat
-	RateToClient       transrpc.Rate  `json:"rateToClient,omitempty" yaml:"rateToClient,omitempty"`             // tr_peer_stat
-	RateToPeer         transrpc.Rate  `json:"rateToPeer,omitempty" yaml:"rateToPeer,omitempty"`                 // tr_peer_stat
-	ID                 int64          `json:"id" yaml:"id"`
-	Torrent            string         `json:"-" yaml:"-" all:"torrent"`
-	HashString         string         `json:"-" yaml:"-" all:"hashString"`
-	ShortHash          string         `json:"-" yaml:"-" all:"shortHash"`
-}
-
-// doPeersGet is the high-level entry point for 'peers get'.
-func doPeersGet(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoPeersGet is the high-level entry point for 'peers get'.
+func DoPeersGet(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
-	var result []peer
+	var result []tctypes.Peer
 	if len(torrents) != 0 {
 		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "peers").Do(context.Background(), cl)
 		if err != nil {
@@ -273,7 +294,7 @@ func doPeersGet(args *Args) error {
 		}
 		for _, t := range res.Torrents {
 			for i, v := range t.Peers {
-				result = append(result, peer{
+				result = append(result, tctypes.Peer{
 					Address:            v.Address,
 					ClientName:         v.ClientName,
 					ClientIsChoked:     v.ClientIsChoked,
@@ -293,7 +314,6 @@ func doPeersGet(args *Args) error {
 					ID:                 int64(i),
 					Torrent:            t.Name,
 					HashString:         t.HashString,
-					ShortHash:          t.ShortHash(),
 				})
 			}
 		}
@@ -308,34 +328,13 @@ func doPeersGet(args *Args) error {
 	)...).Encode(os.Stdout)
 }
 
-// file is combined fields of files, fileStats from a torrent.
-type file struct {
-	BytesCompleted transrpc.ByteCount `json:"bytesCompleted,omitempty" yaml:"bytesCompleted,omitempty"` // tr_torrent
-	Length         transrpc.ByteCount `json:"length,omitempty" yaml:"length,omitempty"`                 // tr_info
-	Name           string             `json:"name,omitempty" yaml:"name,omitempty"`                     // tr_info
-	Wanted         bool               `json:"wanted,omitempty" yaml:"wanted,omitempty"`                 // tr_info
-	Priority       transrpc.Priority  `json:"priority,omitempty" yaml:"priority,omitempty"`             // tr_info
-	ID             int64              `json:"id" yaml:"id"`
-	Torrent        string             `json:"-" yaml:"-" all:"torrent"`
-	HashString     string             `json:"-" yaml:"-" all:"hashString"`
-	ShortHash      string             `json:"-" yaml:"-" all:"shortHash"`
-}
-
-// PercentDone provides the
-func (f file) PercentDone() tcutil.Percent {
-	if f.Length == 0 {
-		return 1.0
-	}
-	return tcutil.Percent(float64(f.BytesCompleted) / float64(f.Length))
-}
-
-// doFilesGet is the high-level entry point for 'files get'.
-func doFilesGet(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoFilesGet is the high-level entry point for 'files get'.
+func DoFilesGet(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
-	var result []file
+	var result []tctypes.File
 	if len(torrents) != 0 {
 		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "files", "fileStats").Do(context.Background(), cl)
 		if err != nil {
@@ -343,16 +342,15 @@ func doFilesGet(args *Args) error {
 		}
 		for _, t := range res.Torrents {
 			for i, v := range t.Files {
-				result = append(result, file{
+				result = append(result, tctypes.File{
 					BytesCompleted: v.BytesCompleted,
 					Length:         v.Length,
 					Name:           v.Name,
 					Wanted:         t.FileStats[i].Wanted,
-					Priority:       t.FileStats[i].Priority,
+					Priority:       t.FileStats[i].Priority.String(),
 					ID:             int64(i),
 					Torrent:        t.Name,
 					HashString:     t.HashString,
-					ShortHash:      t.ShortHash(),
 				})
 			}
 		}
@@ -367,8 +365,8 @@ func doFilesGet(args *Args) error {
 	)...).Encode(os.Stdout)
 }
 
-// doTorrentSet generates a torrent set request to change the specified field.
-func doFilesSet(field string) func(args *Args) error {
+// DoFilesSet generates a torrent set request to change the specified field.
+func DoFilesSet(field string) func(args *Args) error {
 	var errmsg string
 	switch {
 	case strings.HasPrefix(field, "Files"):
@@ -381,7 +379,7 @@ func doFilesSet(field string) func(args *Args) error {
 		if err != nil {
 			return err
 		}
-		cl, torrents, err := findTorrents(args)
+		p, torrents, err := findTorrents(args)
 		if err != nil {
 			return err
 		}
@@ -409,8 +407,8 @@ func doFilesSet(field string) func(args *Args) error {
 	}
 }
 
-// doFilesSetPriority is the high-level entry point for 'files set-priority'.
-func doFilesSetPriority(args *Args) error {
+// DoFilesSetPriority is the high-level entry point for 'files set-priority'.
+func DoFilesSetPriority(args *Args) error {
 	switch args.FilesSetPriorityParams.Priority {
 	case "low":
 		return doFilesSet("PriorityLow")(args)
@@ -422,9 +420,9 @@ func doFilesSetPriority(args *Args) error {
 	return nil
 }
 
-// doFilesRename is the high-level entry point for 'files rename'.
-func doFilesRename(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoFilesRename is the high-level entry point for 'files rename'.
+func DoFilesRename(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -450,46 +448,13 @@ func doFilesRename(args *Args) error {
 	return nil
 }
 
-// tracker is combined fields of trackers, trackerStats from a torrent.
-type tracker struct {
-	Announce              string         `json:"announce,omitempty" yaml:"announce,omitempty"`                           // tr_tracker_info
-	ID                    int64          `json:"id" yaml:"id"`                                                           // tr_tracker_info
-	Scrape                string         `json:"scrape,omitempty" yaml:"scrape,omitempty"`                               // tr_tracker_info
-	Tier                  int64          `json:"tier,omitempty" yaml:"tier,omitempty"`                                   // tr_tracker_info
-	AnnounceState         transrpc.State `json:"announceState,omitempty" yaml:"announceState,omitempty"`                 // tr_tracker_stat
-	DownloadCount         int64          `json:"downloadCount,omitempty" yaml:"downloadCount,omitempty"`                 // tr_tracker_stat
-	HasAnnounced          bool           `json:"hasAnnounced,omitempty" yaml:"hasAnnounced,omitempty"`                   // tr_tracker_stat
-	HasScraped            bool           `json:"hasScraped,omitempty" yaml:"hasScraped,omitempty"`                       // tr_tracker_stat
-	Host                  string         `json:"host,omitempty" yaml:"host,omitempty"`                                   // tr_tracker_stat
-	IsBackup              bool           `json:"isBackup,omitempty" yaml:"isBackup,omitempty"`                           // tr_tracker_stat
-	LastAnnouncePeerCount int64          `json:"lastAnnouncePeerCount,omitempty" yaml:"lastAnnouncePeerCount,omitempty"` // tr_tracker_stat
-	LastAnnounceResult    string         `json:"lastAnnounceResult,omitempty" yaml:"lastAnnounceResult,omitempty"`       // tr_tracker_stat
-	LastAnnounceStartTime transrpc.Time  `json:"lastAnnounceStartTime,omitempty" yaml:"lastAnnounceStartTime,omitempty"` // tr_tracker_stat
-	LastAnnounceSucceeded bool           `json:"lastAnnounceSucceeded,omitempty" yaml:"lastAnnounceSucceeded,omitempty"` // tr_tracker_stat
-	LastAnnounceTime      transrpc.Time  `json:"lastAnnounceTime,omitempty" yaml:"lastAnnounceTime,omitempty"`           // tr_tracker_stat
-	LastAnnounceTimedOut  bool           `json:"lastAnnounceTimedOut,omitempty" yaml:"lastAnnounceTimedOut,omitempty"`   // tr_tracker_stat
-	LastScrapeResult      string         `json:"lastScrapeResult,omitempty" yaml:"lastScrapeResult,omitempty"`           // tr_tracker_stat
-	LastScrapeStartTime   transrpc.Time  `json:"lastScrapeStartTime,omitempty" yaml:"lastScrapeStartTime,omitempty"`     // tr_tracker_stat
-	LastScrapeSucceeded   bool           `json:"lastScrapeSucceeded,omitempty" yaml:"lastScrapeSucceeded,omitempty"`     // tr_tracker_stat
-	LastScrapeTime        transrpc.Time  `json:"lastScrapeTime,omitempty" yaml:"lastScrapeTime,omitempty"`               // tr_tracker_stat
-	LastScrapeTimedOut    int64          `json:"lastScrapeTimedOut,omitempty" yaml:"lastScrapeTimedOut,omitempty"`       // tr_tracker_stat
-	LeecherCount          int64          `json:"leecherCount,omitempty" yaml:"leecherCount,omitempty"`                   // tr_tracker_stat
-	NextAnnounceTime      transrpc.Time  `json:"nextAnnounceTime,omitempty" yaml:"nextAnnounceTime,omitempty"`           // tr_tracker_stat
-	NextScrapeTime        transrpc.Time  `json:"nextScrapeTime,omitempty" yaml:"nextScrapeTime,omitempty"`               // tr_tracker_stat
-	ScrapeState           transrpc.State `json:"scrapeState,omitempty" yaml:"scrapeState,omitempty"`                     // tr_tracker_stat
-	SeederCount           int64          `json:"seederCount,omitempty" yaml:"seederCount,omitempty"`                     // tr_tracker_stat
-	Torrent               string         `json:"-" yaml:"-" all:"torrent"`
-	HashString            string         `json:"-" yaml:"-" all:"hashString"`
-	ShortHash             string         `json:"-" yaml:"-" all:"shortHash"`
-}
-
-// doTrackersGet is the high-level entry point for 'trackers get'.
-func doTrackersGet(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoTrackersGet is the high-level entry point for 'trackers get'.
+func DoTrackersGet(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
-	var result []tracker
+	var result []tctypes.Tracker
 	if len(torrents) != 0 {
 		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "trackers", "trackerStats").Do(context.Background(), cl)
 		if err != nil {
@@ -497,7 +462,7 @@ func doTrackersGet(args *Args) error {
 		}
 		for _, t := range res.Torrents {
 			for i, v := range t.Trackers {
-				result = append(result, tracker{
+				result = append(result, tctypes.Tracker{
 					Announce:              v.Announce,
 					ID:                    v.ID,
 					Scrape:                v.Scrape,
@@ -526,7 +491,6 @@ func doTrackersGet(args *Args) error {
 					SeederCount:           t.TrackerStats[i].SeederCount,
 					Torrent:               t.Name,
 					HashString:            t.HashString,
-					ShortHash:             t.ShortHash(),
 				})
 			}
 		}
@@ -541,9 +505,9 @@ func doTrackersGet(args *Args) error {
 	)...).Encode(os.Stdout)
 }
 
-// doTrackersAdd is the high-level entry point for 'trackers add'.
-func doTrackersAdd(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoTrackersAdd is the high-level entry point for 'trackers add'.
+func DoTrackersAdd(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -554,9 +518,9 @@ func doTrackersAdd(args *Args) error {
 		WithTrackerAdd(args.Tracker).Do(context.Background(), cl)
 }
 
-// doTrackersReplace is the high-level entry point for 'trackers replace'.
-func doTrackersReplace(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoTrackersReplace is the high-level entry point for 'trackers replace'.
+func DoTrackersReplace(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -583,9 +547,9 @@ func doTrackersReplace(args *Args) error {
 	return nil
 }
 
-// doTrackersRemove is the high-level entry point for 'trackers remove'.
-func doTrackersRemove(args *Args) error {
-	cl, torrents, err := findTorrents(args)
+// DoTrackersRemove is the high-level entry point for 'trackers remove'.
+func DoTrackersRemove(args *Args) error {
+	p, torrents, err := findTorrents(args)
 	if err != nil {
 		return err
 	}
@@ -611,6 +575,7 @@ func doTrackersRemove(args *Args) error {
 	return nil
 }
 
+/*
 type keypair struct {
 	HashString string      `json:"-" yaml:"-"`
 	Name       string      `json:"name,omitempty" yaml:"name,omitempty"`
@@ -618,19 +583,19 @@ type keypair struct {
 	Value      interface{} `json:"value,omitempty" yaml:"value,omitempty"`
 	ID         int64       `json:"id" yaml:"id"`
 }
+*/
 
-// doStats is the high-level entry point for 'stats'.
-func doStats(args *Args) error {
-	cl, err := args.newClient()
+// DoStats is the high-level entry point for 'stats'.
+func DoStats(args *Args) error {
+	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	res, err := cl.SessionStats(context.Background())
+	res, err := p.Stats(context.Background())
 	if err != nil {
 		return err
 	}
-	args.Output.NoTotals = true
-	return NewResult(
+	/*
 		[]keypair{
 			{"session-stats", "Active Torrent Count", "active-torrent-count", res.ActiveTorrentCount, 0},
 			{"session-stats", "Download Speed", "download-speed", res.DownloadSpeed, 1},
@@ -648,6 +613,9 @@ func doStats(args *Args) error {
 			{"session-stats", "Current Session Count", "current-stats.session-count", res.CurrentStats.SessionCount, 13},
 			{"session-stats", "Current Seconds Active", "current-stats.seconds-active", res.CurrentStats.SecondsActive, 14},
 		},
+	*/
+	return NewResult(
+		res,
 		args.ResultOptions(
 			TableColumns("name", "value"),
 			WideColumns("name", "key", "value"),
@@ -655,27 +623,28 @@ func doStats(args *Args) error {
 			FlatName("session-stats"),
 			FlatKey("id"),
 			FlatIndex("hashString"),
+			NoTotals(true),
 		)...,
 	).Encode(os.Stdout)
 }
 
-// doShutdown is the high-level entry point for 'shutdown'.
-func doShutdown(args *Args) error {
-	cl, err := args.newClient()
+// DoShutdown is the high-level entry point for 'shutdown'.
+func DoShutdown(args *Args) error {
+	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	return cl.SessionClose(context.Background())
+	return p.SessionClose(context.Background())
 }
 
-// doFreeSpace is the high-level entry point for 'free-space'.
-func doFreeSpace(args *Args) error {
-	cl, err := args.newClient()
+// DoFreeSpace is the high-level entry point for 'free-space'.
+func DoFreeSpace(args *Args) error {
+	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
 	for _, path := range args.Args {
-		size, err := cl.FreeSpace(context.Background(), path)
+		size, err := p.FreeSpace(context.Background(), path)
 		var sz string
 		switch {
 		case err != nil:
@@ -694,13 +663,13 @@ func doFreeSpace(args *Args) error {
 	return nil
 }
 
-// doBlocklistUpdate is the high-level entry point for 'blocklist-update'.
-func doBlocklistUpdate(args *Args) error {
-	cl, err := args.newClient()
+// DoBlocklistUpdate is the high-level entry point for 'blocklist-update'.
+func DoBlocklistUpdate(args *Args) error {
+	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	count, err := cl.BlocklistUpdate(context.Background())
+	count, err := p.BlocklistUpdate(context.Background())
 	if err != nil {
 		return err
 	}
@@ -708,13 +677,13 @@ func doBlocklistUpdate(args *Args) error {
 	return nil
 }
 
-// doPortTest is the high-level entry point for 'port-test'.
-func doPortTest(args *Args) error {
-	cl, err := args.newClient()
+// DoPortTest is the high-level entry point for 'port-test'.
+func DoPortTest(args *Args) error {
+	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	status, err := cl.PortTest(context.Background())
+	status, err := p.PortTest(context.Background())
 	if err != nil {
 		return err
 	}

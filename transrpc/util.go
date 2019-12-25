@@ -17,6 +17,9 @@ func (err Error) Error() string {
 
 // Error values.
 const (
+	// ErrInvalidEncryption is the invalid encryption error.
+	ErrInvalidEncryption Error = "invalid encryption"
+
 	// ErrInvalidTorrentHash is the invalid torrent hash error.
 	ErrInvalidTorrentHash Error = "invalid torrent hash"
 
@@ -31,30 +34,6 @@ const (
 
 	// ErrRecentlyActiveCanHaveOnlyOneValue is the recently-active can have only one value error.
 	ErrRecentlyActiveCanHaveOnlyOneValue Error = "recently-active can have only one value"
-
-	// ErrInvalidPriority is the invalid priority error.
-	ErrInvalidPriority Error = "invalid priority"
-
-	// ErrInvalidStatus is the invalid status error.
-	ErrInvalidStatus Error = "invalid status"
-
-	// ErrInvalidMode is the invalid mode error.
-	ErrInvalidMode Error = "invalid mode"
-
-	// ErrInvalidState is the invalid state error.
-	ErrInvalidState Error = "invalid state"
-
-	// ErrInvalidTime is the invalid time error.
-	ErrInvalidTime Error = "invalid time"
-
-	// ErrInvalidDuration is the invalid duration error.
-	ErrInvalidDuration Error = "invalid duration"
-
-	// ErrInvalidBool is the invalid bool error.
-	ErrInvalidBool Error = "invalid bool"
-
-	// ErrInvalidEncryption is the invalid encryption error.
-	ErrInvalidEncryption Error = "invalid encryption"
 
 	// ErrTorrentRenamePathCanOnlyBeUsedWithOneTorrentIdentifier is the torrent
 	// rename path can only be used with one torrent identifier error.

@@ -1,4 +1,4 @@
-package main
+package providers
 
 import (
 	"fmt"
@@ -14,13 +14,19 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/jdxcode/netrc"
-	"github.com/kenshaw/transctl/tcutil"
-	"github.com/kenshaw/transctl/transrpc"
+	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/torctl/transrpc"
 	"github.com/knq/ini"
 )
 
 // Args holds command args.
 type Args struct {
+	// name is the command name.
+	name string
+
+	// version is the version.
+	version string
+
 	// ConfigFile is the global config file.
 	ConfigFile string
 
@@ -283,7 +289,7 @@ var trackersGetColumnNames = []string{
 }
 
 // NewArgs creates the command args.
-func NewArgs() (*Args, string, error) {
+func NewArgs(name, version string) (*Args, string, error) {
 	// determine netrc path
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -299,13 +305,13 @@ func NewArgs() (*Args, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	configFile := filepath.Join(configDir, "transctl", "config.ini")
+	configFile := filepath.Join(configDir, name, "config.ini")
 
 	// kingpin settings
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	// create args
-	args := &Args{}
+	args := &Args{name: name, version: version}
 	args.AddParams.Cookies = make(map[string]string)
 	args.Output.ColumnNames = make(map[string]string)
 
@@ -460,7 +466,7 @@ func NewArgs() (*Args, string, error) {
 
 	// add --version flag
 	kingpin.Flag("version", "display version and exit").PreAction(func(*kingpin.ParseContext) error {
-		fmt.Fprintln(os.Stdout, "transctl", version)
+		fmt.Fprintln(os.Stdout, args.name, args.version)
 		os.Exit(0)
 		return nil
 	}).Bool()
@@ -675,7 +681,7 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 
 	// build options
 	opts := []transrpc.ClientOption{
-		transrpc.WithUserAgent("transctl/" + version + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"),
+		transrpc.WithUserAgent(args.name + "/" + args.version + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"),
 		transrpc.WithURL(u.String()),
 		transrpc.WithTimeout(timeout),
 	}
@@ -709,6 +715,11 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 	return transrpc.NewClient(opts...), nil
 }
 
+// NewProvider creates a new provider based on the configured type of the remote host.
+func (args *Args) NewProvider() (Provider, error) {
+	return nil, nil
+}
+
 // logf creates a new log func with the specified prefix.
 func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) {
 	return func(s string, v ...interface{}) {
@@ -718,7 +729,7 @@ func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) 
 }
 
 // formatBytes formats a byte amount for display.
-func (args *Args) formatBytes(x tcutil.ByteFormatter) string {
+func (args *Args) formatBytes(x tctypes.ByteFormatter) string {
 	prec := 2
 	if args.Output.Human == "true" || args.Output.Human == "1" || args.Output.SI {
 		if i := x.Int64(); args.Output.SI && i < 1024*1024 || !args.Output.SI && i < 1000*1000 {

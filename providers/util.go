@@ -1,4 +1,4 @@
-package main
+package providers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kenshaw/transctl/transrpc"
+	"github.com/kenshaw/torctl/transrpc"
 	"github.com/knq/snaker"
 )
 
@@ -18,12 +18,6 @@ const (
 	output=table
 `
 )
-
-func init() {
-	if err := snaker.AddInitialisms("UTP"); err != nil {
-		panic(err)
-	}
-}
 
 // Error is the error type.
 type Error string
@@ -86,79 +80,6 @@ const (
 	// ErrInvalidStrlenArguments is the invalid strlen arguments error.
 	ErrInvalidStrlenArguments Error = "invalid strlen() arguments"
 )
-
-// ConfigStore is the interface for config stores.
-type ConfigStore interface {
-	GetKey(string) string
-	SetKey(string, string)
-	RemoveKey(string)
-	GetMapFlat() map[string]string
-	GetAllFlat() []string
-	Write(string) error
-}
-
-// RemoteConfigStore wraps the transrpc client.
-type RemoteConfigStore struct {
-	cl      *transrpc.Client
-	session *transrpc.Session
-	setKeys []string
-}
-
-// NewRemoteConfigStore creates a new remote config store.
-func NewRemoteConfigStore(args *Args) (*RemoteConfigStore, error) {
-	cl, err := args.newClient()
-	if err != nil {
-		return nil, err
-	}
-	session, err := cl.SessionGet(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return &RemoteConfigStore{cl: cl, session: session}, nil
-}
-
-// GetKey satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) GetKey(key string) string {
-	return r.GetMapFlat()[key]
-}
-
-// SetKey satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) SetKey(key, value string) {
-	r.setKeys = append(r.setKeys, key, value)
-}
-
-// RemoveKey satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) RemoveKey(key string) {
-	panic("cannot remove remote session config option")
-}
-
-// GetMapFlat satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) GetMapFlat() map[string]string {
-	m := make(map[string]string)
-	addFieldsToMap(m, "", reflect.ValueOf(*r.session))
-	return m
-}
-
-// GetAllFlat satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) GetAllFlat() []string {
-	m := make(map[string]string)
-	addFieldsToMap(m, "", reflect.ValueOf(*r.session))
-	var keys []string
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var ret []string
-	for _, k := range keys {
-		ret = append(ret, k, m[k])
-	}
-	return ret
-}
-
-// Write satisfies the ConfigStore interface.
-func (r *RemoteConfigStore) Write(string) error {
-	return doWithAndExecute(r.cl, transrpc.SessionSet(), "--remote config", r.setKeys...)
-}
 
 // convTorrentIDs converts torrent list to a hash string identifier list.
 func convTorrentIDs(torrents []transrpc.Torrent) []interface{} {
