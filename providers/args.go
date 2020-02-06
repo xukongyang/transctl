@@ -709,7 +709,7 @@ func (args *Args) newClient() (*transrpc.Client, error) {
 	}
 
 	if args.Verbose {
-		opts = append(opts, transrpc.WithLogf(args.logf(os.Stderr, "> "), args.logf(os.Stderr, "< ")))
+		opts = append(opts, transrpc.WithLogf(args.logf(os.Stderr)))
 	}
 
 	return transrpc.NewClient(opts...), nil
@@ -721,10 +721,9 @@ func (args *Args) NewProvider() (Provider, error) {
 }
 
 // logf creates a new log func with the specified prefix.
-func (args *Args) logf(w io.Writer, prefix string) func(string, ...interface{}) {
+func (args *Args) logf(w io.Writer) func(string, ...interface{}) {
 	return func(s string, v ...interface{}) {
-		s = strings.TrimSuffix(fmt.Sprintf(s, v...), "\n")
-		fmt.Fprintln(w, prefix+strings.Replace(s, "\n", "\n"+prefix, -1)+"\n")
+		fmt.Fprintf(w, s, v...)
 	}
 }
 

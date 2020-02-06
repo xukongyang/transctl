@@ -12,7 +12,8 @@ import (
 
 func main() {
 	cl := qbtweb.NewClient(
-		qbtweb.WithHost("user:pass@my-host:8080"),
+		qbtweb.WithHost("admin:adminadmin@localhost:8080"),
+		qbtweb.WithLogf(log.Printf),
 	)
 
 	torrents, err := cl.TorrentsInfo(context.Background())
@@ -20,7 +21,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, torrent := range torrents {
-		log.Printf("> ID: %d Name: %s Hash: %s", torrent.ID, torrent.Name, torrent.HashString)
+	for i, torrent := range torrents {
+		log.Printf("> ID: %d Name: %s Hash: %s", i, torrent.Name, torrent.Hash)
 	}
 }

@@ -13,8 +13,9 @@ require (
 	github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d
 	github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0
 	github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687
+	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
 	gopkg.in/yaml.v2 v2.2.7 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
+	gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71
 )

@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strings"
 )
 
@@ -31,9 +30,6 @@ const (
 	// ErrRequestFailed is the request failed error.
 	ErrRequestFailed Error = "request failed"
 )
-
-// sha1RE is a regexp to verify a SHA1 hash in string form.
-var sha1RE = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 
 // buildParamMap converts z into a map[string]interface{}.
 func buildParamMap(z interface{}) (map[string]interface{}, error) {

@@ -247,7 +247,7 @@ func (d Duration) String() string {
 	case -1 * time.Second:
 		return "Done"
 	case -2 * time.Second:
-		return "Unknown"
+		return "" // "Unknown"
 	default:
 		return v.String()
 	}
@@ -288,7 +288,7 @@ func (d MilliDuration) String() string {
 	case -1 * time.Millisecond:
 		return "Done"
 	case -2 * time.Millisecond:
-		return "Unknown"
+		return "" // "Unknown"
 	default:
 		return v.String()
 	}

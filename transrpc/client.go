@@ -5,30 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
-)
 
-const (
-	// DefaultTimeout is the default client timeout.
-	DefaultTimeout = 10 * time.Second
-
-	// DefaultUserAgent is the default client user agent.
-	DefaultUserAgent = "transrpc/0.1"
+	"github.com/kenshaw/torctl/tctypes"
 )
 
 // Client is a transmission rpc client.
 type Client struct {
 	// cl is the underlying http client.
 	cl *http.Client
-
-	// transport is the http transport used when not-nil. Used to specify
-	// things like retrying transport layers, additional authentication layers,
-	// or other transports such as a logging transport.
-	transport http.RoundTripper
 
 	// userAgent is the user agent string sent to the rpc host.
 	userAgent string
@@ -58,10 +46,8 @@ type Client struct {
 // NewClient issues a new transmission rpc client.
 func NewClient(opts ...ClientOption) *Client {
 	cl := &Client{
-		cl: &http.Client{
-			Timeout: DefaultTimeout,
-		},
-		userAgent: DefaultUserAgent,
+		cl:        new(http.Client),
+		userAgent: "transrpc/0.1",
 		retries:   5,
 	}
 	for _, o := range opts {
@@ -334,16 +320,16 @@ func WithRetries(retries int) ClientOption {
 	}
 }
 
-// WithHTTPClient is a transmission rpc client option to set the underlying
+// WithClient is a transmission rpc client option to set the underlying
 // http.Client used.
-func WithHTTPClient(httpClient *http.Client) ClientOption {
+func WithClient(httpClient *http.Client) ClientOption {
 	return func(cl *Client) {
 		cl.cl = httpClient
 	}
 }
 
 // WithTimeout is a transmission rpc client option to set the rpc host request
-// tiemout.
+// timeout.
 func WithTimeout(timeout time.Duration) ClientOption {
 	return func(cl *Client) {
 		cl.cl.Timeout = timeout
@@ -366,51 +352,10 @@ func WithCredentialFallback(user, pass string) ClientOption {
 	}
 }
 
-// WithLogf is a transmission rpc client option to set logging handlers HTTP
-// request and response bodies.
-func WithLogf(req, res func(string, ...interface{})) ClientOption {
+// WithLogf is a transmission rpc client option to set a log handler for HTTP
+// requests and responses.
+func WithLogf(logf func(string, ...interface{})) ClientOption {
 	return func(cl *Client) {
-		hl := &httpLogger{
-			req: req,
-			res: res,
-		}
-
-		// inject as client transport
-		cl.transport = hl
-		if cl.cl != nil {
-			hl.transport = cl.cl.Transport
-			cl.cl.Transport = hl
-		}
+		cl.cl.Transport = tctypes.NewHTTPLogf(cl.cl.Transport, logf)
 	}
-}
-
-// httpLogger logs HTTP requests and responses.
-type httpLogger struct {
-	transport http.RoundTripper
-	req, res  func(string, ...interface{})
-}
-
-func (hl *httpLogger) RoundTrip(req *http.Request) (*http.Response, error) {
-	trans := hl.transport
-	if trans == nil {
-		trans = http.DefaultTransport
-	}
-
-	reqBody, err := httputil.DumpRequestOut(req, true)
-	if err != nil {
-		return nil, err
-	}
-	res, err := trans.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	resBody, err := httputil.DumpResponse(res, true)
-	if err != nil {
-		return nil, err
-	}
-
-	hl.req("%s", string(reqBody))
-	hl.res("%s", string(resBody))
-
-	return res, err
 }

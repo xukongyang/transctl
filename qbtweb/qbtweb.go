@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kenshaw/transctl/tcutil"
+	"github.com/kenshaw/torctl/tctypes"
 )
 
 //go:generate stringer -type DaySchedule
@@ -30,31 +30,31 @@ import (
 // Type aliases
 type (
 	// ByteCount is a byte count.
-	ByteCount = tcutil.ByteCount
+	ByteCount = tctypes.ByteCount
 
 	// Rate is a byte per second rate.
-	Rate = tcutil.Rate
+	Rate = tctypes.Rate
 
 	// Limit is a KB/s limit.
-	// Limit = tcutil.Limit
+	// Limit = tctypes.Limit
 
 	// Limit is a KiB/s limit.
-	KiLimit = tcutil.KiLimit
+	KiLimit = tctypes.KiLimit
 
 	// Percent is a percent.
-	Percent = tcutil.Percent
+	Percent = tctypes.Percent
 
 	// Time wraps time.Time.
-	Time = tcutil.Time
+	Time = tctypes.Time
 
 	// MilliTime wraps time.Time.
-	MilliTime = tcutil.MilliTime
+	MilliTime = tctypes.MilliTime
 
 	// Duration wraps time.Duration.
-	Duration = tcutil.Duration
+	Duration = tctypes.Duration
 
 	// Bool wraps bool.
-	Bool = tcutil.Bool
+	Bool = tctypes.Bool
 )
 
 // State is the state enum.
