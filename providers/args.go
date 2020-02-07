@@ -393,7 +393,7 @@ func NewArgs(name, version string) (*Args, string, error) {
 		cmd.Flag("all", "list all torrents").Hidden().BoolVar(&args.Filter.ListAll)
 		cmd.Flag("recent", "recently active torrents").Short('R').BoolVar(&args.Filter.Recent)
 		cmd.Flag("active", "recently active torrents").Hidden().BoolVar(&args.Filter.Recent)
-		cmd.Flag("filter", "torrent filter").Short('F').PlaceHolder("<filter>").Default(
+		cmd.Flag("filter", "torrent filter").Short('f').PlaceHolder("<filter>").Default(
 			`id == identifier || name %% identifier || (strlen(identifier) >= 5 && hashString %^ identifier)`,
 		).IsSetByUser(&args.Filter.FilterWasSet).StringVar(&args.Filter.Filter)
 
@@ -487,7 +487,11 @@ func (args *Args) addOutputFlags(cmd *kingpin.CmdClause, sortBy string, columnNa
 	cmd.Flag("human", "print sizes in powers of 1024 (e.g., 1023MiB) (default: true)").Default("true").PlaceHolder("true").StringVar(&args.Output.Human)
 	cmd.Flag("si", "print sizes in powers of 1000 (e.g., 1.1GB)").IsSetByUser(&args.Output.SIWasSet).BoolVar(&args.Output.SI)
 	cmd.Flag("no-headers", "disable table header output").BoolVar(&args.Output.NoHeaders)
+	cmd.Flag("noheaders", "disable table header output").Hidden().BoolVar(&args.Output.NoHeaders)
+	cmd.Flag("noheader", "disable table header output").Hidden().BoolVar(&args.Output.NoHeaders)
 	cmd.Flag("no-totals", "disable table total output").BoolVar(&args.Output.NoTotals)
+	cmd.Flag("nototals", "disable table total output").Hidden().BoolVar(&args.Output.NoTotals)
+	cmd.Flag("nototal", "disable table total output").Hidden().BoolVar(&args.Output.NoTotals)
 	cmd.Flag("column-name", "change output column name").PlaceHolder("<k=v>").Default(columnNames...).StringMapVar(&args.Output.ColumnNames)
 	cmd.Flag("sort-by", "sort output order by column").PlaceHolder("<sort>").Default(sortBy).IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)
 	cmd.Flag("order-by", "sort output order by column").Hidden().PlaceHolder("<sort>").IsSetByUser(&args.Output.SortByWasSet).StringVar(&args.Output.SortBy)

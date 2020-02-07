@@ -21,7 +21,9 @@ const (
 	_ProxyType_name_1 = "HTTPWithoutAuthenticationSOCKS5WithoutAuthenticationHTTPWithAuthenticationSOCKS5WithAuthenticationSOCKS4WithoutAuthentication"
 )
 
-var _ProxyType_index_1 = [...]uint8{0, 25, 52, 74, 98, 125}
+var (
+	_ProxyType_index_1 = [...]uint8{0, 25, 52, 74, 98, 125}
+)
 
 func (i ProxyType) String() string {
 	switch {

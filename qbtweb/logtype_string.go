@@ -20,7 +20,9 @@ const (
 	_LogType_name_2 = "Critical"
 )
 
-var _LogType_index_0 = [...]uint8{0, 6, 10}
+var (
+	_LogType_index_0 = [...]uint8{0, 6, 10}
+)
 
 func (i LogType) String() string {
 	switch {
