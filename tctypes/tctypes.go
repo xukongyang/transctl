@@ -501,6 +501,7 @@ type Torrent struct {
 	DownloadedEver    ByteCount `json:"downloadedEver,omitempty" yaml:"downloadedEver,omitempty"`       // tr_stat
 	DownloadLimit     Limit     `json:"downloadLimit,omitempty" yaml:"downloadLimit,omitempty"`         // tr_torrent
 	DownloadLimited   bool      `json:"downloadLimited,omitempty" yaml:"downloadLimited,omitempty"`     // tr_torrent
+	EditDate          Time      `json:"editDate,omitempty" yaml:"editDate,omitempty"`                   // tr_stat
 	Error             ErrNo     `json:"error,omitempty" yaml:"error,omitempty"`                         // tr_stat
 	ErrorString       string    `json:"errorString,omitempty" yaml:"errorString,omitempty"`             // tr_stat
 	Eta               Duration  `json:"eta,omitempty" yaml:"eta,omitempty"`                             // tr_stat
