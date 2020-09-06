@@ -83,7 +83,6 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 		}); err != nil {
 			return err
 		}
-
 		urlstr := cl.url
 
 		// inject credential fallback
@@ -168,7 +167,6 @@ func (cl *Client) Do(ctx context.Context, method string, arguments, v interface{
 	if result.Result != "success" {
 		return &ErrRequestFailed{result.Result}
 	}
-
 	return nil
 }
 

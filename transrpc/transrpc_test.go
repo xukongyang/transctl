@@ -8,17 +8,14 @@ import (
 
 func TestUnmarshalJSON(t *testing.T) {
 	var torrents []Torrent
-	err := json.NewDecoder(strings.NewReader(torrentJSON)).Decode(&torrents)
-	if err != nil {
+	if err := json.NewDecoder(strings.NewReader(torrentJSON)).Decode(&torrents); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	if len(torrents) != 2 {
 		t.Errorf("expected 2 torrents, got: %d", len(torrents))
 	}
-
 	var session Session
-	err = json.NewDecoder(strings.NewReader(sessionJSON)).Decode(&session)
-	if err != nil {
+	if err := json.NewDecoder(strings.NewReader(sessionJSON)).Decode(&session); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }

@@ -4,12 +4,16 @@ import (
 	"context"
 
 	"github.com/kenshaw/transctl/tctypes"
+	"github.com/knq/snaker"
 )
 
 // Provider is a torrent provider.
 type Provider interface {
 	// NewRemoteConfigStore creates a config store for the remote host.
 	NewRemoteConfigStore(context.Context) (ConfigStore, error)
+
+	// Find finds torrents.
+	Find(context.Context) ([]interface{}, error)
 
 	// Add adds a torrent ([]byte) or magnet link (string).
 	Add(context.Context, ...interface{}) ([]tctypes.Torrent, error)
@@ -91,6 +95,9 @@ func Register(name string, f func(*Args) (Provider, error)) {
 
 func init() {
 	providers = make(map[string]func() Provider)
+	if err := snaker.AddInitialisms("UTP"); err != nil {
+		panic(err)
+	}
 }
 
 // ConfigStore is the interface for config stores.

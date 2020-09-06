@@ -47,7 +47,7 @@ import (
 */
 
 // DoConfig is the high-level entry point for 'config'.
-func DoConfig(args *Args, cmd string) error {
+func DoConfig(ctx context.Context, args *Args, cmd string) error {
 	var store ConfigStore = args.Config
 	if args.ConfigParams.Remote {
 		var err error
@@ -55,32 +55,27 @@ func DoConfig(args *Args, cmd string) error {
 		if err != nil {
 			return err
 		}
-		store, err = p.NewRemoteConfigStore(context.Background())
+		store, err = p.NewRemoteConfigStore(ctx)
 		if err != nil {
 			return err
 		}
 	}
-
 	switch {
 	case args.ConfigParams.Unset:
 		store.RemoveKey(args.ConfigParams.Name)
 		return store.Write(args.ConfigFile)
-
 	case args.ConfigParams.Name != "" && args.ConfigParams.Value == "":
 		fmt.Fprintln(os.Stdout, store.GetKey(args.ConfigParams.Name))
 		return nil
-
 	case args.ConfigParams.Value != "":
 		store.SetKey(args.ConfigParams.Name, args.ConfigParams.Value)
 		return store.Write(args.ConfigFile)
 	}
-
 	// list all
 	all := store.GetAllFlat()
 	for i := 0; i < len(all); i += 2 {
 		fmt.Fprintf(os.Stdout, "%s=%s\n", strings.TrimSpace(all[i]), strings.TrimSpace(all[i+1]))
 	}
-
 	return nil
 }
 
@@ -88,12 +83,11 @@ func DoConfig(args *Args, cmd string) error {
 var magnetRE = regexp.MustCompile(`(?i)^magnet:\?`)
 
 // DoAdd is the high-level entry point for 'add'.
-func DoAdd(args *Args, cmd string) error {
+func DoAdd(ctx context.Context, args *Args, cmd string) error {
 	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-
 	var files []interface{}
 	for _, v := range args.Args {
 		// determine each arg is magnet link or file on disk
@@ -129,7 +123,7 @@ func DoAdd(args *Args, cmd string) error {
 				WithBandwidthPriority(args.AddParams.BandwidthPriority)
 
 			// execute
-			res, err := req.Do(context.Background(), cl)
+			res, err := req.Do(ctx, cl)
 			if err != nil {
 				return err
 			}
@@ -142,7 +136,7 @@ func DoAdd(args *Args, cmd string) error {
 	*/
 
 	// execute
-	result, err := p.Add(context.Background(), files...)
+	result, err := p.Add(ctx, files...)
 	if err != nil {
 		return err
 	}
@@ -175,8 +169,12 @@ var (
 )
 
 // DoGet is the high-level entry point for 'get'.
-func DoGet(args *Args, cmd string) error {
-	p, torrents, err := findTorrents(args)
+func DoGet(ctx context.Context, args *Args, cmd string) error {
+	p, err := args.NewProvider()
+	if err != nil {
+		return err
+	}
+	torrents, err := p.FindTorrents(ctx)
 	if err != nil {
 		return err
 	}
@@ -191,7 +189,7 @@ func DoGet(args *Args, cmd string) error {
 		case strings.HasPrefix(args.Output.Output, "cols="):
 			fields = strings.Split(args.Output.Output[5:], ",")
 		}
-		req := transrpc.TorrentGet(convTorrentIDs(torrents)...)
+		req := transrpc.TorrentGet(p.ConvertTorrentIDs(torrents)...)
 		if len(fields) != 0 {
 			var cols []string
 			// inverse lookup
@@ -211,7 +209,7 @@ func DoGet(args *Args, cmd string) error {
 			}
 			req = req.WithFields(cols...)
 		}
-		res, err := req.Do(context.Background(), cl)
+		res, err := req.Do(ctx, p)
 		if err != nil {
 			return err
 		}
@@ -226,8 +224,8 @@ func DoGet(args *Args, cmd string) error {
 }
 
 // DoSet is the high-level entry point for 'set'.
-func DoSet(args *Args, cmd string) error {
-	p, torrents, err := findTorrents(args)
+func DoSet(ctx context.Context, args *Args, cmd string) error {
+	torrents, err := FindTorrents(ctx, args, p)
 	if err != nil {
 		return err
 	}
@@ -239,22 +237,26 @@ func DoSet(args *Args, cmd string) error {
 
 // DoReq creates the high-level entry points for general torrent manipulation
 // requests.
-func DoReq(f func(...interface{}) *transrpc.Request) func(*Args) error {
+func DoReq(ctx context.Context, f func(...interface{}) *transrpc.Request) func(*Args) error {
 	return func(args *Args) error {
-		p, torrents, err := findTorrents(args)
+		p, err := args.NewProvider()
+		if err != nil {
+			return err
+		}
+		torrents, err := p.FindTorrents(ctx, args)
 		if err != nil {
 			return err
 		}
 		if len(torrents) == 0 {
 			return nil
 		}
-		return f(convTorrentIDs(torrents)...).Do(context.Background(), p)
+		return f(convTorrentIDs(torrents)...).Do(ctx, p)
 	}
 }
 
 // DoMove is the high-level entry point for 'move'.
-func DoMove(args *Args) error {
-	p, torrents, err := findTorrents(args)
+func DoMove(ctx context.Context, args *Args) error {
+	torrents, err := FindTorrents(ctx, args)
 	if err != nil {
 		return err
 	}
@@ -263,12 +265,12 @@ func DoMove(args *Args) error {
 	}
 	return transrpc.TorrentSetLocation(
 		args.MoveParams.Dest, true, convTorrentIDs(torrents)...,
-	).Do(context.Background(), cl)
+	).Do(ctx, cl)
 }
 
 // DoRemove is the high-level entry point for 'remove'.
-func DoRemove(args *Args) error {
-	p, torrents, err := findTorrents(args)
+func DoRemove(ctx context.Context, args *Args) error {
+	torrents, err := FindTorrents(ctx, args)
 	if err != nil {
 		return err
 	}
@@ -277,18 +279,18 @@ func DoRemove(args *Args) error {
 	}
 	return transrpc.TorrentRemove(
 		args.RemoveParams.Remove, convTorrentIDs(torrents)...,
-	).Do(context.Background(), cl)
+	).Do(ctx, cl)
 }
 
 // DoPeersGet is the high-level entry point for 'peers get'.
-func DoPeersGet(args *Args) error {
-	p, torrents, err := findTorrents(args)
+func DoPeersGet(ctx context.Context, args *Args) error {
+	torrents, err := FindTorrents(ctx, args)
 	if err != nil {
 		return err
 	}
 	var result []tctypes.Peer
 	if len(torrents) != 0 {
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "peers").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "peers").Do(ctx, cl)
 		if err != nil {
 			return err
 		}
@@ -330,13 +332,13 @@ func DoPeersGet(args *Args) error {
 
 // DoFilesGet is the high-level entry point for 'files get'.
 func DoFilesGet(args *Args) error {
-	p, torrents, err := findTorrents(args)
+	torrents, err := FindTorrents(ctx, args)
 	if err != nil {
 		return err
 	}
 	var result []tctypes.File
 	if len(torrents) != 0 {
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "files", "fileStats").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "files", "fileStats").Do(ctx, cl)
 		if err != nil {
 			return err
 		}
@@ -386,7 +388,7 @@ func DoFilesSet(field string) func(args *Args) error {
 		if len(torrents) == 0 {
 			return nil
 		}
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files").Do(ctx, cl)
 		if err != nil {
 			return nil
 		}
@@ -430,7 +432,7 @@ func DoFilesRename(args *Args) error {
 		return nil
 	}
 	req := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "files")
-	res, err := req.Do(context.Background(), cl)
+	res, err := req.Do(ctx, cl)
 	if err != nil {
 		return err
 	}
@@ -439,7 +441,7 @@ func DoFilesRename(args *Args) error {
 			if f.Name == args.FilesRenameParams.OldPath {
 				if err = transrpc.TorrentRenamePath(
 					args.FilesRenameParams.OldPath, args.FilesRenameParams.NewPath, t.HashString,
-				).Do(context.Background(), cl); err != nil {
+				).Do(ctx, cl); err != nil {
 					return err
 				}
 			}
@@ -456,7 +458,7 @@ func DoTrackersGet(args *Args) error {
 	}
 	var result []tctypes.Tracker
 	if len(torrents) != 0 {
-		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "trackers", "trackerStats").Do(context.Background(), cl)
+		res, err := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("name", "hashString", "trackers", "trackerStats").Do(ctx, cl)
 		if err != nil {
 			return err
 		}
@@ -515,7 +517,7 @@ func DoTrackersAdd(args *Args) error {
 		return nil
 	}
 	return transrpc.TorrentSet(convTorrentIDs(torrents)...).
-		WithTrackerAdd(args.Tracker).Do(context.Background(), cl)
+		WithTrackerAdd(args.Tracker).Do(ctx, cl)
 }
 
 // DoTrackersReplace is the high-level entry point for 'trackers replace'.
@@ -528,7 +530,7 @@ func DoTrackersReplace(args *Args) error {
 		return nil
 	}
 	req := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "trackers")
-	res, err := req.Do(context.Background(), cl)
+	res, err := req.Do(ctx, cl)
 	if err != nil {
 		return err
 	}
@@ -537,7 +539,7 @@ func DoTrackersReplace(args *Args) error {
 			if tracker.Announce == args.Tracker {
 				if err := transrpc.TorrentSet(t.HashString).WithTrackerReplace(
 					tracker.ID, args.TrackersReplaceParams.Replace,
-				).Do(context.Background(), cl); err != nil {
+				).Do(ctx, cl); err != nil {
 					return fmt.Errorf("could not replace tracker %d (%s) with %s for %s: %w",
 						tracker.ID, args.Tracker, args.TrackersReplaceParams.Replace, t.HashString, err)
 				}
@@ -548,8 +550,8 @@ func DoTrackersReplace(args *Args) error {
 }
 
 // DoTrackersRemove is the high-level entry point for 'trackers remove'.
-func DoTrackersRemove(args *Args) error {
-	p, torrents, err := findTorrents(args)
+func DoTrackersRemove(ctx context.Context, args *Args) error {
+	torrents, err := p.FindTorrents()
 	if err != nil {
 		return err
 	}
@@ -557,7 +559,7 @@ func DoTrackersRemove(args *Args) error {
 		return nil
 	}
 	req := transrpc.TorrentGet(convTorrentIDs(torrents)...).WithFields("hashString", "trackers")
-	res, err := req.Do(context.Background(), cl)
+	res, err := req.Do(ctx, cl)
 	if err != nil {
 		return err
 	}
@@ -566,7 +568,7 @@ func DoTrackersRemove(args *Args) error {
 			if tracker.Announce == args.Tracker {
 				if err := transrpc.TorrentSet(t.HashString).WithTrackerRemove(
 					tracker.ID,
-				).Do(context.Background(), cl); err != nil {
+				).Do(ctx, cl); err != nil {
 					return fmt.Errorf("could not remove tracker %d (%s) from %s: %w", tracker.ID, args.Tracker, t.HashString, err)
 				}
 			}
@@ -586,12 +588,12 @@ type keypair struct {
 */
 
 // DoStats is the high-level entry point for 'stats'.
-func DoStats(args *Args) error {
+func DoStats(ctx context.Context, args *Args) error {
 	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	res, err := p.Stats(context.Background())
+	res, err := p.Stats(ctx)
 	if err != nil {
 		return err
 	}
@@ -629,22 +631,22 @@ func DoStats(args *Args) error {
 }
 
 // DoShutdown is the high-level entry point for 'shutdown'.
-func DoShutdown(args *Args) error {
+func DoShutdown(ctx context.Context, args *Args) error {
 	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	return p.SessionClose(context.Background())
+	return p.SessionClose(ctx)
 }
 
 // DoFreeSpace is the high-level entry point for 'free-space'.
-func DoFreeSpace(args *Args) error {
+func DoFreeSpace(ctx context.Context, args *Args) error {
 	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
 	for _, path := range args.Args {
-		size, err := p.FreeSpace(context.Background(), path)
+		size, err := p.FreeSpace(ctx, path)
 		var sz string
 		switch {
 		case err != nil:
@@ -664,12 +666,12 @@ func DoFreeSpace(args *Args) error {
 }
 
 // DoBlocklistUpdate is the high-level entry point for 'blocklist-update'.
-func DoBlocklistUpdate(args *Args) error {
+func DoBlocklistUpdate(ctx context.Context, args *Args) error {
 	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	count, err := p.BlocklistUpdate(context.Background())
+	count, err := p.BlocklistUpdate(ctx)
 	if err != nil {
 		return err
 	}
@@ -678,12 +680,12 @@ func DoBlocklistUpdate(args *Args) error {
 }
 
 // DoPortTest is the high-level entry point for 'port-test'.
-func DoPortTest(args *Args) error {
+func DoPortTest(ctx context.Context, args *Args) error {
 	p, err := args.NewProvider()
 	if err != nil {
 		return err
 	}
-	status, err := p.PortTest(context.Background())
+	status, err := p.PortTest(ctx)
 	if err != nil {
 		return err
 	}

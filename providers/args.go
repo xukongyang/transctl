@@ -477,7 +477,6 @@ func NewArgs(name, version string) (*Args, string, error) {
 	if err = args.loadConfig(cmd); err != nil {
 		return nil, "", err
 	}
-
 	return args, cmd, nil
 }
 

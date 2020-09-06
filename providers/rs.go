@@ -567,8 +567,7 @@ func readFieldOrMethodType(x reflect.Type, name string) (reflect.Type, bool) {
 
 // readFieldOrMethod returns the field or method name declared on x.
 func readFieldOrMethod(x reflect.Value, name string) (interface{}, error) {
-	name = snaker.ForceCamelIdentifier(name)
-	v := x.FieldByName(name)
+	name, v = snaker.ForceCamelIdentifier(name), x.FieldByName(name)
 	if v.Kind() == reflect.Invalid {
 		v = x.MethodByName(name)
 		if v.Kind() == reflect.Invalid {

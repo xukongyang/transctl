@@ -86,7 +86,6 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-
 	var v []interface{}
 	for _, id := range ids {
 		switch x := id.(type) {
@@ -100,17 +99,14 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 			v = append(v, int64(x))
 		case int64:
 			v = append(v, x)
-
 		case [40]byte:
 			v = append(v, fmt.Sprintf("%x", x))
-
 		case []byte:
 			// convert
 			if len(x) != 40 {
 				return nil, ErrInvalidTorrentHash
 			}
 			v = append(v, fmt.Sprintf("%x", x))
-
 		case string:
 			// check if "recently-active", if so then no other ids may be
 			// present. also check that a string is a valid sha1 hash
@@ -121,12 +117,10 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 				return nil, ErrInvalidTorrentHash
 			}
 			v = append(v, strings.ToLower(x))
-
 		default:
 			return nil, ErrInvalidIdentifierType
 		}
 	}
-
 	if len(v) == 1 {
 		switch x := v[0].(type) {
 		case int64:
@@ -137,6 +131,5 @@ func checkIdentifierList(ids ...interface{}) (interface{}, error) {
 			}
 		}
 	}
-
 	return v, nil
 }

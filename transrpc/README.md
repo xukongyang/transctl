@@ -1,19 +1,17 @@
-# transrpc [![GoDoc][godoc]][godoc-link] [![Build Status][travis-ci]][travis-ci-link]
+# transrpc [![GoDoc][godoc]][godoc-link]
 
 Package `transrpc` provides a Go idiomatic [Transmission RPC][transmission-spec]
-client, primarily for use by the [command-line tool `transctl`][transctl].
+client, and is part of the [command-line tool `transctl`][transctl].
 
-[godoc]: https://godoc.org/github.com/kenshaw/transrpc?status.svg (GoDoc)
-[godoc-link]: https://godoc.org/github.com/kenshaw/transrpc
-[travis-ci]: https://travis-ci.org/kenshaw/transrpc.svg?branch=master (Travis CI)
-[travis-ci-link]: https://travis-ci.org/kenshaw/transrpc
+[godoc]: https://godoc.org/github.com/kenshaw/transctl/transrpc?status.svg (GoDoc)
+[godoc-link]: https://godoc.org/github.com/kenshaw/transctl/transrpc
 
 ## Installing
 
 Install in the usual [Go][go-project] fashion:
 
 ```sh
-$ go get -u github.com/kenshaw/transrpc
+$ go get -u github.com/kenshaw/transctl/transrpc
 ```
 
 ## Using
@@ -28,19 +26,17 @@ import (
 	"context"
 	"log"
 
-	"github.com/kenshaw/transrpc"
+	"github.com/kenshaw/transctl/transrpc"
 )
 
 func main() {
 	cl := transrpc.NewClient(
 		transrpc.WithHost("user:pass@my-host:9091"),
 	)
-
 	res, err := cl.TorrentGet(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	for _, torrent := range res.Torrents {
 		log.Printf("> ID: %d Name: %s Hash: %s", torrent.ID, torrent.Name, torrent.HashString)
 	}

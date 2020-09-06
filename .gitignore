@@ -1,7 +1,7 @@
 /build/
 
-/torctl
-/torctl.exe
+/transctl
+/transctl.exe
 /notes.txt
 *.json
 *.ini

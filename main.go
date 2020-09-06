@@ -1,18 +1,17 @@
-// Command transctl is a command-line utility to manage transmission rpc hosts.
+// Command transctl is a command-line utility to manage torrent client hosts.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/knq/snaker"
-
 	"github.com/kenshaw/transctl/providers"
-	_ "github.com/kenshaw/transctl/providers/deluge"
 	_ "github.com/kenshaw/transctl/providers/qbittorrent"
-	_ "github.com/kenshaw/transctl/providers/rtorrent"
 	_ "github.com/kenshaw/transctl/providers/transmission"
-	_ "github.com/kenshaw/transctl/providers/utorrent"
+	//	_ "github.com/kenshaw/transctl/providers/deluge"
+	//	_ "github.com/kenshaw/transctl/providers/rtorrent"
+	//	_ "github.com/kenshaw/transctl/providers/utorrent"
 )
 
 // version is the command version.
@@ -31,11 +30,12 @@ func main() {
 // run executes the command logic.
 func run() error {
 	// build args
-	args, cmd, err := providers.NewArgs()
+	args, cmd, err := providers.NewArgs(name, version)
 	if err != nil {
 		return err
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), args.Timeout)
+	defer cancel()
 	f := map[string]func(*providers.Args) error{
 		"config":             providers.DoConfig,
 		"add":                providers.DoAdd,
@@ -67,12 +67,5 @@ func run() error {
 		"blocklist-update":   providers.DoBlocklistUpdate,
 		"port-test":          providers.DoPortTest,
 	}[cmd]
-
-	return f(args, cmd)
-}
-
-func init() {
-	if err := snaker.AddInitialisms("UTP"); err != nil {
-		panic(err)
-	}
+	return f(ctx, args, cmd)
 }

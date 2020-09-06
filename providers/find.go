@@ -15,13 +15,8 @@ import (
 	"github.com/kenshaw/transctl/tctypes"
 )
 
-// findTorrents finds torrents based on the identifier args.
-func findTorrents(args *Args) (Provider, []tctypes.Torrent, error) {
-	p, err := args.NewProvider()
-	if err != nil {
-		return nil, nil, err
-	}
-
+// FindTorrents finds torrents based on args from the provider.
+func FindTorrents(ctx context.Context, args *Args) ([]tctypes.Torrent, error) {
 	var req *TorrentGetRequest
 	var fields map[string][]string
 	switch {
@@ -45,7 +40,8 @@ func findTorrents(args *Args) (Provider, []tctypes.Torrent, error) {
 		return nil, nil, ErrMustSpecifyListRecentFilterOrAtLeastOneTorrent
 	}
 
-	res, err := req.Do(context.Background(), cl)
+	// execute
+	res, err := req.Do(ctx, cl)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,7 +51,7 @@ func findTorrents(args *Args) (Provider, []tctypes.Torrent, error) {
 
 	l := buildQueryLanguage()
 
-	// filter torrents
+	// filter
 	var torrents []tctypes.Torrent
 	for _, t := range res.Torrents {
 		m := buildJSONMap(t, fields)
@@ -74,8 +70,7 @@ func findTorrents(args *Args) (Provider, []tctypes.Torrent, error) {
 			}
 		}
 	}
-
-	return cl, torrents, nil
+	return torrents, nil
 }
 
 // extractVars extracts the var names from the provided expression.
