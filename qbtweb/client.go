@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/transctl/tctypes"
 	"golang.org/x/net/publicsuffix"
 )
 

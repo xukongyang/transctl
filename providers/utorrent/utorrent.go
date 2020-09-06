@@ -3,7 +3,7 @@ package utorrent
 import (
 	"context"
 
-	"github.com/kenshaw/torctl/providers"
+	"github.com/kenshaw/transctl/providers"
 )
 
 type Torrent struct {

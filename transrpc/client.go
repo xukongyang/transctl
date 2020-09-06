@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/transctl/tctypes"
 )
 
 // Client is a transmission rpc client.

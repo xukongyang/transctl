@@ -7,17 +7,17 @@ import (
 
 	"github.com/knq/snaker"
 
-	"github.com/kenshaw/torctl/providers"
-	_ "github.com/kenshaw/torctl/providers/deluge"
-	_ "github.com/kenshaw/torctl/providers/qbittorrent"
-	_ "github.com/kenshaw/torctl/providers/rtorrent"
-	_ "github.com/kenshaw/torctl/providers/transmission"
-	_ "github.com/kenshaw/torctl/providers/utorrent"
+	"github.com/kenshaw/transctl/providers"
+	_ "github.com/kenshaw/transctl/providers/deluge"
+	_ "github.com/kenshaw/transctl/providers/qbittorrent"
+	_ "github.com/kenshaw/transctl/providers/rtorrent"
+	_ "github.com/kenshaw/transctl/providers/transmission"
+	_ "github.com/kenshaw/transctl/providers/utorrent"
 )
 
 // version is the command version.
 var (
-	name    = "torctl"
+	name    = "transctl"
 	version = "0.0.0-dev"
 )
 

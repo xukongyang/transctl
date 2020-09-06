@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
-	"github.com/kenshaw/torctl/tctypes"
-	"github.com/kenshaw/torctl/transrpc"
+	"github.com/kenshaw/transctl/tctypes"
+	"github.com/kenshaw/transctl/transrpc"
 )
 
 /*

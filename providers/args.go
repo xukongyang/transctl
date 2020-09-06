@@ -14,8 +14,8 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/jdxcode/netrc"
-	"github.com/kenshaw/torctl/tctypes"
-	"github.com/kenshaw/torctl/transrpc"
+	"github.com/kenshaw/transctl/tctypes"
+	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/ini"
 )
 

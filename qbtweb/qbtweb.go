@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/transctl/tctypes"
 )
 
 //go:generate stringer -type DaySchedule

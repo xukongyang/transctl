@@ -3,7 +3,7 @@ package providers
 import (
 	"context"
 
-	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/transctl/tctypes"
 )
 
 // Provider is a torrent provider.

@@ -7,7 +7,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/kenshaw/torctl/qbtweb"
+	"github.com/kenshaw/transctl/qbtweb"
 )
 
 func main() {

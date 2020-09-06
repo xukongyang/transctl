@@ -1,4 +1,4 @@
-module github.com/kenshaw/torctl
+module github.com/kenshaw/transctl
 
 go 1.13
 
@@ -11,11 +11,11 @@ require (
 	github.com/gdm85/go-rencode v0.1.2
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxcode/netrc v0.0.0-20190329161231-b36f1c51d91d
-	github.com/knq/ini v0.0.0-20191206014339-58b5e74713e0
+	github.com/knq/ini v0.0.0-20200508011635-ad6e8e8848b5
 	github.com/knq/snaker v0.0.0-20181215144011-2bc8a4db4687
-	github.com/mattn/go-runewidth v0.0.8 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
 	gopkg.in/yaml.v2 v2.2.7 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 )

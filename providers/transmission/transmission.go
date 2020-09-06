@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/kenshaw/torctl/providers"
-	"github.com/kenshaw/torctl/transrpc"
+	"github.com/kenshaw/transctl/providers"
+	"github.com/kenshaw/transctl/transrpc"
 )
 
 func init() {

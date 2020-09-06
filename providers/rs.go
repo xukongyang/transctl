@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kenshaw/torctl/tctypes"
-	"github.com/kenshaw/torctl/transrpc"
+	"github.com/kenshaw/transctl/tctypes"
+	"github.com/kenshaw/transctl/transrpc"
 	"github.com/knq/snaker"
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v3"

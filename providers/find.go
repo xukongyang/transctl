@@ -12,7 +12,7 @@ import (
 	"github.com/gobwas/glob"
 	"github.com/knq/snaker"
 
-	"github.com/kenshaw/torctl/tctypes"
+	"github.com/kenshaw/transctl/tctypes"
 )
 
 // findTorrents finds torrents based on the identifier args.
